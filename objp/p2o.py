@@ -1,10 +1,11 @@
 import re
-from .base import tmpl_replace
+from .base import tmpl_replace, TYPE_SPECS_REVERSED
 
 TEMPLATE_UNIT = """
 #define PY_SSIZE_T_CLEAN
 #import <Python.h>
 #import "structmember.h"
+#import "ObjP.h"
 
 %%objcinterface%%
 
@@ -133,7 +134,7 @@ static int
 }
 """
 
-TEMPLATE_METHOD = """
+TEMPLATE_METHOD_NOARGS = """
 static PyObject *
 %%clsname%%Proxy_%%methname%%(%%clsname%%Proxy *self)
 {
@@ -142,29 +143,81 @@ static PyObject *
 }
 """
 
+TEMPLATE_METHOD_VARARGS = """
+static PyObject *
+%%clsname%%Proxy_%%methname%%(%%clsname%%Proxy *self, PyObject *args)
+{
+    PyObject %%argliststar%%;
+    if (!PyArg_ParseTuple(args, "%%argfmt%%", %%arglistamp%%)) {
+        return NULL;
+    }
+    %%conversion%%
+    
+    [self->objc_ref %%methcall%%];
+    Py_RETURN_NONE;
+}
+"""
+
 TEMPLATE_METHODDEF = """
-{"%%methname%%", (PyCFunction)%%clsname%%Proxy_%%methname%%, METH_NOARGS, ""},
+{"%%methname%%", (PyCFunction)%%clsname%%Proxy_%%methname%%, %%methtype%%, ""},
 """
 
 def parse_objc_header(header):
-    # returns (clsname, [methodname])
+    # returns (clsname, [(methodname, resulttype, [(argname, argtype)])])
     re_class = re.compile(r"@interface\s+(\w*?)\s*:\s*\w*?.*?{.*?}(.*?)@end", re.MULTILINE | re.DOTALL)
     match = re_class.search(header)
     assert match is not None
     clsname, methods = match.groups()
-    re_method = re.compile(r"-\s*\(\s*\w+?\s*\)(\w+?);")
-    return (clsname, re_method.findall(methods))
+    re_method = re.compile(r"-\s*\(\s*([\w *]+?)\s*\)(.+?);")
+    methods = re_method.findall(methods)
+    method_specs = []
+    re_method_elems = re.compile(r"(\w+)\s*:\s*\(\s*(\w+?\s*\*?)\s*\)\s*(\w+)")
+    for resulttype, rest in methods:
+        elems = re_method_elems.findall(rest)
+        if not elems: # no arguments
+            name = rest
+            args = []
+        else:
+            name = ':'.join(elem[0] for elem in elems)
+            if not name.endswith(':'):
+                name += ':'
+            args = [(elem[2], elem[1]) for elem in elems]
+        method_specs.append((name, resulttype, args))
+    return (clsname, method_specs)
 
 def generate_python_proxy_code(header_path, destpath):
     with open(header_path, 'rt') as fp:
         header = fp.read()
-    clsname, methodnames = parse_objc_header(header)
+    clsname, method_specs = parse_objc_header(header)
     tmpl_initfunc = tmpl_replace(TEMPLATE_INITFUNC_CREATE, clsname=clsname)
     tmpl_methods = []
     tmpl_methodsdef = []
-    for methname in methodnames:
-        tmpl_methods.append(tmpl_replace(TEMPLATE_METHOD, clsname=clsname, methname=methname))
-        tmpl_methodsdef.append(tmpl_replace(TEMPLATE_METHODDEF, clsname=clsname, methname=methname))
+    for methodname, resulttype, args in method_specs:
+        assert resulttype == 'void' # we don't support return values yet
+        tmpl_methname = methodname.replace(':', '_')
+        if args:
+            tmpl_methtype = 'METH_VARARGS'
+            tmpl_argliststar = ', '.join('*p'+name for name, _ in args)
+            tmpl_arglistamp = ', '.join('&p'+name for name, _ in args)
+            tmpl_argfmt = 'O' * len(args)
+            conversion = []
+            for name, type in args:
+                ts = TYPE_SPECS_REVERSED[type]
+                conversion.append('%s %s = %s;' % (type, name, ts.p2o_code % ('p'+name)))
+            tmpl_conversion = '\n'.join(conversion)
+            elems = methodname.split(':')
+            elems_and_args = [elem + ':' + argname for elem, (argname, _) in zip(elems, args)]
+            tmpl_methcall = ' '.join(elems_and_args)
+            tmpl_methods.append(tmpl_replace(TEMPLATE_METHOD_VARARGS, clsname=clsname,
+                methname=tmpl_methname, methtype=tmpl_methtype, argliststar=tmpl_argliststar,
+                arglistamp=tmpl_arglistamp, argfmt=tmpl_argfmt, conversion=tmpl_conversion,
+                methcall=tmpl_methcall))
+        else:
+            tmpl_methtype = 'METH_NOARGS'
+            tmpl_methods.append(tmpl_replace(TEMPLATE_METHOD_NOARGS, clsname=clsname,
+                methname=tmpl_methname))
+        tmpl_methodsdef.append(tmpl_replace(TEMPLATE_METHODDEF, clsname=clsname,
+            methname=tmpl_methname, methtype=tmpl_methtype))
     tmpl_methods = ''.join(tmpl_methods)
     tmpl_methodsdef = ''.join(tmpl_methodsdef)
     result = tmpl_replace(TEMPLATE_UNIT, clsname=clsname, objcinterface=header,

@@ -1,8 +1,8 @@
 #import "ObjCHello.h"
 
 @implementation ObjCHello
-- (void)hello
+- (void)helloToName:(NSString *)name
 {
-    NSLog(@"Hello from ObjC!");
+    NSLog(@"Hello %@ from ObjC!", name);
 }
 @end

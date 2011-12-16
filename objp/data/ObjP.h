@@ -10,3 +10,4 @@
 
 // New reference
 PyObject* ObjP_findPythonClass(NSString *name);
+NSString* ObjP_str2nsstring(PyObject *pStr);

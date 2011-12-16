@@ -1,7 +1,6 @@
 #import <Cocoa/Cocoa.h>
 #import <Python.h>
 #import "Simple.h"
-#import "ObjCHello.h"
 
 void hello_from_python()
 {

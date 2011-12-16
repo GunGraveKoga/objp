@@ -1,12 +1,14 @@
 import os.path as op
 from collections import namedtuple
 
-TypeSpec = namedtuple('TypeSpec', 'objctype o2p_format o2p_code p2o_code')
+TypeSpec = namedtuple('TypeSpec', 'pytype objctype o2p_format o2p_code p2o_code')
 
 TYPE_SPECS = {
-    str: TypeSpec('NSString *', 's', '[%s UTF8String]', 'ObjP_str2nsstring(%s)'),
-    int: TypeSpec('NSInteger', 'i', '%s', 'PyLong_AsLong(%s)'),
+    str: TypeSpec(str, 'NSString *', 's', '[%s UTF8String]', 'ObjP_str2nsstring(%s)'),
+    int: TypeSpec(int, 'NSInteger', 'i', '%s', 'PyLong_AsLong(%s)'),
 }
+
+TYPE_SPECS_REVERSED = {ts.objctype: ts for ts in TYPE_SPECS.values()}
 
 DATA_PATH = op.join(op.dirname(__file__), 'data')
 

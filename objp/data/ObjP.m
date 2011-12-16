@@ -29,3 +29,12 @@ PyObject* ObjP_findPythonClass(NSString *name)
     }
     return pClass;
 }
+
+NSString* ObjP_str2nsstring(PyObject *pStr)
+{
+    PyObject *pBytes = PyUnicode_AsUTF8String(pStr);
+    char *utf8Bytes = PyBytes_AS_STRING(pBytes);
+    NSString *result = [NSString stringWithUTF8String:utf8Bytes];
+    Py_DECREF(pBytes);
+    return result;
+}

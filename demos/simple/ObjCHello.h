@@ -1,5 +1,5 @@
 #import <Cocoa/Cocoa.h>
 
 @interface ObjCHello : NSObject {}
-- (void)hello;
+- (void)helloToName:(NSString *)name;
 @end
