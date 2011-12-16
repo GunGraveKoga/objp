@@ -1,0 +1,7 @@
+syntax: glob
+
+__pycache__
+.waf*
+.lock*
+demos/simple/build
+demos/simple/autogen
