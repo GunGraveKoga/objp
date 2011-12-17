@@ -138,8 +138,8 @@ TEMPLATE_METHOD_NOARGS = """
 static PyObject *
 %%clsname%%Proxy_%%methname%%(%%clsname%%Proxy *self)
 {
-    [self->objc_ref %%methname%%];
-    Py_RETURN_NONE;
+    %%retvalassign%%[self->objc_ref %%methname%%];
+    %%retvalreturn%%
 }
 """
 
@@ -153,8 +153,8 @@ static PyObject *
     }
     %%conversion%%
     
-    [self->objc_ref %%methcall%%];
-    Py_RETURN_NONE;
+    %%retvalassign%%[self->objc_ref %%methcall%%];
+    %%retvalreturn%%
 }
 """
 
@@ -193,31 +193,34 @@ def generate_python_proxy_code(header_path, destpath):
     tmpl_methods = []
     tmpl_methodsdef = []
     for methodname, resulttype, args in method_specs:
-        assert resulttype == 'void' # we don't support return values yet
-        tmpl_methname = methodname.replace(':', '_')
+        tmplval = {}
+        tmplval['methname'] = methodname.replace(':', '_')
+        if resulttype == 'void':
+            tmplval['retvalassign'] = ''
+            tmplval['retvalreturn'] = 'Py_RETURN_NONE;'
+        else:
+            ts = TYPE_SPECS_REVERSED[resulttype]
+            tmplval['retvalassign'] = '%s retval = ' % ts.objctype
+            fmt = 'PyObject *pResult = Py_BuildValue("%s", %s); return pResult;'
+            tmplval['retvalreturn'] = fmt % (ts.o2p_format, ts.o2p_code % 'retval')
         if args:
-            tmpl_methtype = 'METH_VARARGS'
-            tmpl_argliststar = ', '.join('*p'+name for name, _ in args)
-            tmpl_arglistamp = ', '.join('&p'+name for name, _ in args)
-            tmpl_argfmt = 'O' * len(args)
+            tmplval['methtype'] = 'METH_VARARGS'
+            tmplval['argliststar'] = ', '.join('*p'+name for name, _ in args)
+            tmplval['arglistamp'] = ', '.join('&p'+name for name, _ in args)
+            tmplval['argfmt'] = 'O' * len(args)
             conversion = []
             for name, type in args:
                 ts = TYPE_SPECS_REVERSED[type]
                 conversion.append('%s %s = %s;' % (type, name, ts.p2o_code % ('p'+name)))
-            tmpl_conversion = '\n'.join(conversion)
+            tmplval['conversion'] = '\n'.join(conversion)
             elems = methodname.split(':')
             elems_and_args = [elem + ':' + argname for elem, (argname, _) in zip(elems, args)]
-            tmpl_methcall = ' '.join(elems_and_args)
-            tmpl_methods.append(tmpl_replace(TEMPLATE_METHOD_VARARGS, clsname=clsname,
-                methname=tmpl_methname, methtype=tmpl_methtype, argliststar=tmpl_argliststar,
-                arglistamp=tmpl_arglistamp, argfmt=tmpl_argfmt, conversion=tmpl_conversion,
-                methcall=tmpl_methcall))
+            tmplval['methcall'] = ' '.join(elems_and_args)
+            tmpl_methods.append(tmpl_replace(TEMPLATE_METHOD_VARARGS, clsname=clsname, **tmplval))
         else:
-            tmpl_methtype = 'METH_NOARGS'
-            tmpl_methods.append(tmpl_replace(TEMPLATE_METHOD_NOARGS, clsname=clsname,
-                methname=tmpl_methname))
-        tmpl_methodsdef.append(tmpl_replace(TEMPLATE_METHODDEF, clsname=clsname,
-            methname=tmpl_methname, methtype=tmpl_methtype))
+            tmplval['methtype'] = 'METH_NOARGS'
+            tmpl_methods.append(tmpl_replace(TEMPLATE_METHOD_NOARGS, clsname=clsname, **tmplval))
+        tmpl_methodsdef.append(tmpl_replace(TEMPLATE_METHODDEF, clsname=clsname, **tmplval))
     tmpl_methods = ''.join(tmpl_methods)
     tmpl_methodsdef = ''.join(tmpl_methodsdef)
     result = tmpl_replace(TEMPLATE_UNIT, clsname=clsname, objcinterface=header,

@@ -5,4 +5,9 @@
 {
     NSLog(@"Hello %@ from ObjC!", name);
 }
+
+- (NSInteger)answerToLife
+{
+    return 42;
+}
 @end

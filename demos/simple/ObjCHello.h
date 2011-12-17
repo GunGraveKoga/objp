@@ -2,4 +2,5 @@
 
 @interface ObjCHello : NSObject {}
 - (void)helloToName:(NSString *)name;
+- (NSInteger)answerToLife;
 @end
