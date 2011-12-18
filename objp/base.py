@@ -1,11 +1,11 @@
 import os.path as op
 from collections import namedtuple
 
-TypeSpec = namedtuple('TypeSpec', 'objctype o2p_format o2p_code p2o_code')
+TypeSpec = namedtuple('TypeSpec', 'objctype o2p_code p2o_code')
 
 TYPE_SPECS = {
-    str: TypeSpec('NSString *', 's', '[%s UTF8String]', 'ObjP_str2nsstring(%s)'),
-    int: TypeSpec('NSInteger', 'i', '%s', 'PyLong_AsLong(%s)'),
+    str: TypeSpec('NSString *', 'ObjP_str_o2p(%s)', 'ObjP_str_p2o(%s)'),
+    int: TypeSpec('NSInteger', 'ObjP_int_o2p(%s)', 'ObjP_int_p2o(%s)'),
 }
 
 TYPE_SPECS_REVERSED = {ts.objctype: ts for ts in TYPE_SPECS.values()}

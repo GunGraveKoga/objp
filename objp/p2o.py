@@ -201,8 +201,8 @@ def generate_python_proxy_code(header_path, destpath):
         else:
             ts = TYPE_SPECS_REVERSED[resulttype]
             tmplval['retvalassign'] = '%s retval = ' % ts.objctype
-            fmt = 'PyObject *pResult = Py_BuildValue("%s", %s); return pResult;'
-            tmplval['retvalreturn'] = fmt % (ts.o2p_format, ts.o2p_code % 'retval')
+            fmt = 'PyObject *pResult = %s; return pResult;'
+            tmplval['retvalreturn'] = fmt % (ts.o2p_code % 'retval')
         if args:
             tmplval['methtype'] = 'METH_VARARGS'
             tmplval['argliststar'] = ', '.join('*p'+name for name, _ in args)

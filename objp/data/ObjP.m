@@ -30,11 +30,26 @@ PyObject* ObjP_findPythonClass(NSString *name)
     return pClass;
 }
 
-NSString* ObjP_str2nsstring(PyObject *pStr)
+NSString* ObjP_str_p2o(PyObject *pStr)
 {
     PyObject *pBytes = PyUnicode_AsUTF8String(pStr);
     char *utf8Bytes = PyBytes_AS_STRING(pBytes);
     NSString *result = [NSString stringWithUTF8String:utf8Bytes];
     Py_DECREF(pBytes);
     return result;
+}
+
+PyObject* ObjP_str_o2p(NSString *str)
+{
+    return PyUnicode_FromString([str UTF8String]);
+}
+
+NSInteger ObjP_int_p2o(PyObject *pInt)
+{
+    return PyLong_AsLong(pInt);
+}
+
+PyObject* ObjP_int_o2p(NSInteger i)
+{
+    return PyLong_FromLong(i);
 }

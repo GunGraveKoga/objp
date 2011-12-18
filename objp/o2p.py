@@ -30,8 +30,10 @@ TEMPLATE_UNIT = """
 TEMPLATE_METHOD = """
 - %%signature%%
 {
-    PyObject *pResult;
-    pResult = PyObject_CallMethod(py, "%%pyname%%", "(%%format%%)", %%args%%);
+    PyObject *pResult, *pMethodName;
+    pMethodName = PyUnicode_FromString("%%pyname%%");
+    pResult = PyObject_CallMethodObjArgs(py, pMethodName, %%args%%, NULL);
+    Py_DECREF(pMethodName);
     %%returncode%%
 }
 """
@@ -63,13 +65,10 @@ def get_objc_method_code(name, argspec):
     signature = get_objc_signature(name, argspec)
     args = argspec.args[1:] # remove self
     ann = argspec.annotations
-    tmpl_format = []
     tmpl_args = []
     for arg in args:
         ts = TYPE_SPECS[ann[arg]]
-        tmpl_format.append(ts.o2p_format)
         tmpl_args.append(ts.o2p_code % arg)
-    tmpl_format = ''.join(tmpl_format)
     tmpl_args = ', '.join(tmpl_args)
     if 'return' in ann:
         ts = TYPE_SPECS[ann['return']]
@@ -77,8 +76,8 @@ def get_objc_method_code(name, argspec):
         returncode = tmpl_replace(TEMPLATE_RETURN, type=ts.objctype, pyconversion=tmpl_pyconversion)
     else:
         returncode = TEMPLATE_RETURN_VOID
-    code = tmpl_replace(TEMPLATE_METHOD, signature=signature, pyname=name, format=tmpl_format,
-        args=tmpl_args, returncode=returncode)
+    code = tmpl_replace(TEMPLATE_METHOD, signature=signature, pyname=name, args=tmpl_args,
+        returncode=returncode)
     sig = '- %s;' % signature
     return (code, sig)
 
