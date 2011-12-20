@@ -3,5 +3,6 @@ syntax: glob
 __pycache__
 .waf*
 .lock*
+.tm_*
 demos/simple/build
 demos/simple/autogen

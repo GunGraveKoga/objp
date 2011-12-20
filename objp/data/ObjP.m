@@ -53,3 +53,54 @@ PyObject* ObjP_int_o2p(NSInteger i)
 {
     return PyLong_FromLong(i);
 }
+
+NSObject* ObjP_obj_p2o(PyObject *pObj)
+{
+	if (PyUnicode_Check(pObj)) {
+		return ObjP_str_p2o(pObj);
+	}
+	else if (PyLong_Check(pObj)) {
+		return [NSNumber numberWithInt:ObjP_int_p2o(pObj)];
+	}
+	else {
+		return nil;
+	}
+}
+
+PyObject* ObjP_obj_o2p(NSObject *obj)
+{
+	if ([obj isKindOfClass:[NSString class]]) {
+		return ObjP_str_o2p((NSString *)obj);
+	}
+	else if ([obj isKindOfClass:[NSNumber class]]) {
+		return ObjP_int_o2p([(NSNumber *)obj intValue]);
+	}
+	else {
+		return NULL;
+	}
+}
+
+NSArray* ObjP_list_p2o(PyObject *pList)
+{
+	PyObject *iterator = PyObject_GetIter(pList);
+	PyObject *item;
+	NSMutableArray *result = [NSMutableArray array];
+	while (item = PyIter_Next(iterator)) {
+		[result addObject:ObjP_obj_p2o(item)];
+	    Py_DECREF(item);
+	}
+	Py_DECREF(iterator);
+	return result;
+}
+
+PyObject* ObjP_list_o2p(NSArray *list)
+{
+	PyObject *pResult = PyList_New([list count]);
+	NSInteger i;
+	for (i=0; i<[list count]; i++) {
+		NSObject *obj = [list objectAtIndex:i];
+		PyObject *pItem = ObjP_obj_o2p(obj);
+		PyList_SET_ITEM(pResult, i, pItem);
+	}
+	return pResult;
+}

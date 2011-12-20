@@ -10,3 +10,6 @@ class Simple:
     def addNumbersA_andB_(self, a: int, b: int) -> int:
         return a + b
     
+    def doubleNumbers_(self, numbers: list) -> list:
+        return [i*2 for i in numbers]
+    

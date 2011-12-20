@@ -11,6 +11,8 @@ void hello_from_python()
     Simple *foo = [[Simple alloc] init];
     [foo hello:@"Virgil"];
     NSLog(@"added numbers: %d", [foo addNumbersA:42 andB:45]);
+	NSArray *numbers = [NSArray arrayWithObjects:[NSNumber numberWithInt:12], [NSNumber numberWithInt:42], nil];
+	NSLog(@"And here's a list of number doubled by Python: %@", [[foo doubleNumbers:numbers] description]);
     [foo release];
     Py_Finalize();
 }

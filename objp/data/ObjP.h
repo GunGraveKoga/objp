@@ -14,3 +14,7 @@ NSString* ObjP_str_p2o(PyObject *pStr);
 PyObject* ObjP_str_o2p(NSString *str);
 NSInteger ObjP_int_p2o(PyObject *pInt);
 PyObject* ObjP_int_o2p(NSInteger i);
+NSObject* ObjP_obj_p2o(PyObject *pObj);
+PyObject* ObjP_obj_o2p(NSObject *obj);
+NSArray* ObjP_list_p2o(PyObject *pList);
+PyObject* ObjP_list_o2p(NSArray *list);
