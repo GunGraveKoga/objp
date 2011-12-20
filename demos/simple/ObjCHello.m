@@ -10,4 +10,9 @@
 {
     return 42;
 }
+
+- (NSDictionary *)answersDict
+{
+	return [NSDictionary dictionaryWithObject:[NSNumber numberWithInt:42] forKey:@"life"];
+}
 @end

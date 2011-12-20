@@ -7,6 +7,7 @@ TYPE_SPECS = {
     str: TypeSpec('NSString *', 'ObjP_str_o2p(%s)', 'ObjP_str_p2o(%s)'),
     int: TypeSpec('NSInteger', 'ObjP_int_o2p(%s)', 'ObjP_int_p2o(%s)'),
     list: TypeSpec('NSArray *', 'ObjP_list_o2p(%s)', 'ObjP_list_p2o(%s)'),
+    dict: TypeSpec('NSDictionary *', 'ObjP_dict_o2p(%s)', 'ObjP_dict_p2o(%s)'),
 }
 
 TYPE_SPECS_REVERSED = {ts.objctype: ts for ts in TYPE_SPECS.values()}
