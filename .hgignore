@@ -1,6 +1,9 @@
 syntax: glob
 
 __pycache__
+build
+dist
+*.egg-info
 .waf*
 .lock*
 .tm_*
