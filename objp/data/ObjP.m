@@ -54,13 +54,37 @@ PyObject* ObjP_int_o2p(NSInteger i)
     return PyLong_FromLong(i);
 }
 
+BOOL ObjP_bool_p2o(PyObject *pBool)
+{
+    return PyObject_IsTrue(pBool);
+}
+
+PyObject* ObjP_bool_o2p(BOOL b)
+{
+    if (b) {
+        Py_RETURN_TRUE;
+    }
+    else {
+        Py_RETURN_FALSE;
+    }
+}
+
 NSObject* ObjP_obj_p2o(PyObject *pObj)
 {
-    if (PyUnicode_Check(pObj)) {
+    if (pObj == Py_None) {
+        return nil;
+    }
+    else if (PyUnicode_Check(pObj)) {
         return ObjP_str_p2o(pObj);
     }
     else if (PyLong_Check(pObj)) {
         return [NSNumber numberWithInt:ObjP_int_p2o(pObj)];
+    }
+    else if (PyList_Check(pObj)) {
+        return ObjP_list_p2o(pObj);
+    }
+    else if (PyDict_Check(pObj)) {
+        return ObjP_dict_p2o(pObj);
     }
     else {
         return nil;
@@ -69,11 +93,20 @@ NSObject* ObjP_obj_p2o(PyObject *pObj)
 
 PyObject* ObjP_obj_o2p(NSObject *obj)
 {
-    if ([obj isKindOfClass:[NSString class]]) {
+    if (obj == nil) {
+        Py_RETURN_NONE;
+    }
+    else if ([obj isKindOfClass:[NSString class]]) {
         return ObjP_str_o2p((NSString *)obj);
     }
     else if ([obj isKindOfClass:[NSNumber class]]) {
         return ObjP_int_o2p([(NSNumber *)obj intValue]);
+    }
+    else if ([obj isKindOfClass:[NSArray class]]) {
+        return ObjP_list_o2p((NSArray *)obj);
+    }
+    else if ([obj isKindOfClass:[NSDictionary class]]) {
+        return ObjP_dict_o2p((NSDictionary *)obj);
     }
     else {
         return NULL;
@@ -85,7 +118,7 @@ NSArray* ObjP_list_p2o(PyObject *pList)
     PyObject *iterator = PyObject_GetIter(pList);
     PyObject *item;
     NSMutableArray *result = [NSMutableArray array];
-    while (item = PyIter_Next(iterator)) {
+    while ( (item = PyIter_Next(iterator)) ) {
         [result addObject:ObjP_obj_p2o(item)];
         Py_DECREF(item);
     }

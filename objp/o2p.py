@@ -1,9 +1,7 @@
-import os
 import os.path as op
-import shutil
 import inspect
 
-from .base import TYPE_SPECS, tmpl_replace, DATA_PATH
+from .base import TYPE_SPECS, tmpl_replace, copy_objp_unit
 
 TEMPLATE_HEADER = """
 #import "ObjP.h"
@@ -97,10 +95,7 @@ def generate_objc_code(class_, destfolder):
             continue
     header = tmpl_replace(TEMPLATE_HEADER, classname=class_.__name__, methods='\n'.join(method_sigs))
     implementation = tmpl_replace(TEMPLATE_UNIT, classname=class_.__name__, methods=''.join(method_code))
-    if not op.exists(destfolder):
-        os.makedirs(destfolder)
-    shutil.copy(op.join(DATA_PATH, 'ObjP.h'), destfolder)
-    shutil.copy(op.join(DATA_PATH, 'ObjP.m'), destfolder)
+    copy_objp_unit(destfolder)
     with open(op.join(destfolder, '%s.h' % class_.__name__), 'wt') as fp:
         fp.write(header)
     with open(op.join(destfolder, '%s.m' % class_.__name__), 'wt') as fp:

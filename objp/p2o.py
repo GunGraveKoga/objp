@@ -1,5 +1,6 @@
 import re
-from .base import tmpl_replace, TYPE_SPECS_REVERSED
+import os.path as op
+from .base import tmpl_replace, TYPE_SPECS_REVERSED, copy_objp_unit
 
 TEMPLATE_UNIT = """
 #define PY_SSIZE_T_CLEAN
@@ -54,7 +55,7 @@ static PyTypeObject %%clsname%%Proxy_Type = {
     0, /*tp_getattro*/
     0, /*tp_setattro*/
     0, /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HAVE_GC, /*tp_flags*/
+    Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
     "%%clsname%%Proxy object", /* tp_doc */
     0, /* tp_traverse */
     0, /* tp_clear */
@@ -225,6 +226,7 @@ def generate_python_proxy_code(header_path, destpath):
     tmpl_methodsdef = ''.join(tmpl_methodsdef)
     result = tmpl_replace(TEMPLATE_UNIT, clsname=clsname, objcinterface=header,
         initfunc=tmpl_initfunc, methods=tmpl_methods, methodsdef=tmpl_methodsdef)
+    copy_objp_unit(op.dirname(destpath))
     with open(destpath, 'wt') as fp:
         fp.write(result)
     
