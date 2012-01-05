@@ -17,7 +17,7 @@ TEMPLATE_UNIT = """
 @implementation %%classname%%
 - (id)init
 {
-    self = [super initwithClassName:@"Simple"];
+    self = [super initwithClassName:@"%%classname%%"];
     return self;
 }
 
