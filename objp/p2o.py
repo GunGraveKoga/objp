@@ -13,14 +13,14 @@ TEMPLATE_UNIT = """
 typedef struct {
     PyObject_HEAD
     %%clsname%% *objc_ref;
-} %%clsname%%Proxy;
+} %%clsname%%_Struct;
 
-static PyTypeObject %%clsname%%Proxy_Type; /* Forward declaration */
+static PyTypeObject %%clsname%%_Type; /* Forward declaration */
 
 /* Methods */
 
 static void
-%%clsname%%Proxy_dealloc(%%clsname%%Proxy *self)
+%%clsname%%_dealloc(%%clsname%%_Struct *self)
 {
     [self->objc_ref release];
     Py_TYPE(self)->tp_free((PyObject *)self);
@@ -30,17 +30,17 @@ static void
 
 %%methods%%
 
-static PyMethodDef %%clsname%%Proxy_methods[] = {
+static PyMethodDef %%clsname%%_methods[] = {
  %%methodsdef%%
 {NULL}  /* Sentinel */
 };
 
-static PyTypeObject %%clsname%%Proxy_Type = {
+static PyTypeObject %%clsname%%_Type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    "%%clsname%%Proxy.%%clsname%%Proxy", /*tp_name*/
-    sizeof(%%clsname%%Proxy), /*tp_basicsize*/
+    "%%modulename%%.%%clsname%%", /*tp_name*/
+    sizeof(%%clsname%%_Struct), /*tp_basicsize*/
     0, /*tp_itemsize*/
-    (destructor)%%clsname%%Proxy_dealloc, /*tp_dealloc*/
+    (destructor)%%clsname%%_dealloc, /*tp_dealloc*/
     0, /*tp_print*/
     0, /*tp_getattr*/
     0, /*tp_setattr*/
@@ -56,14 +56,14 @@ static PyTypeObject %%clsname%%Proxy_Type = {
     0, /*tp_setattro*/
     0, /*tp_as_buffer*/
     Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE, /*tp_flags*/
-    "%%clsname%%Proxy object", /* tp_doc */
+    "%%clsname%% object", /* tp_doc */
     0, /* tp_traverse */
     0, /* tp_clear */
     0, /* tp_richcompare */
     0, /* tp_weaklistoffset */
     0, /* tp_iter */
     0, /* tp_iternext */
-    %%clsname%%Proxy_methods,/* tp_methods */
+    %%clsname%%_methods,/* tp_methods */
     0, /* tp_members */
     0, /* tp_getset */
     0, /* tp_base */
@@ -71,7 +71,7 @@ static PyTypeObject %%clsname%%Proxy_Type = {
     0, /* tp_descr_get */
     0, /* tp_descr_set */
     0, /* tp_dictoffset */
-    (initproc)%%clsname%%Proxy_init,      /* tp_init */
+    (initproc)%%clsname%%_init,      /* tp_init */
     0, /* tp_alloc */
     0, /* tp_new */
     0, /* tp_free */
@@ -87,9 +87,9 @@ static PyMethodDef module_methods[] = {
     {NULL}  /* Sentinel */
 };
 
-static struct PyModuleDef %%clsname%%ProxyDef = {
+static struct PyModuleDef %%modulename%%Def = {
     PyModuleDef_HEAD_INIT,
-    "%%clsname%%Proxy",
+    "%%modulename%%",
     NULL,
     -1,
     module_methods,
@@ -100,22 +100,22 @@ static struct PyModuleDef %%clsname%%ProxyDef = {
 };
 
 PyObject *
-PyInit_%%clsname%%Proxy(void)
+PyInit_%%modulename%%(void)
 {
     PyObject *m;
     
-    %%clsname%%Proxy_Type.tp_new = PyType_GenericNew;
-    if (PyType_Ready(&%%clsname%%Proxy_Type) < 0) {
+    %%clsname%%_Type.tp_new = PyType_GenericNew;
+    if (PyType_Ready(&%%clsname%%_Type) < 0) {
         return NULL;
     }
     
-    m = PyModule_Create(&%%clsname%%ProxyDef);
+    m = PyModule_Create(&%%modulename%%Def);
     if (m == NULL) {
         return NULL;
     }
     
-    Py_INCREF(&%%clsname%%Proxy_Type);
-    PyModule_AddObject(m, "%%clsname%%Proxy", (PyObject *)&%%clsname%%Proxy_Type);
+    Py_INCREF(&%%clsname%%_Type);
+    PyModule_AddObject(m, "%%clsname%%", (PyObject *)&%%clsname%%_Type);
     return m;
 }
 
@@ -123,7 +123,7 @@ PyInit_%%clsname%%Proxy(void)
 
 TEMPLATE_INITFUNC_CREATE = """
 static int
-%%clsname%%Proxy_init(%%clsname%%Proxy *self, PyObject *args, PyObject *kwds)
+%%clsname%%_init(%%clsname%%_Struct *self, PyObject *args, PyObject *kwds)
 {
     if (!PyArg_ParseTuple(args, "")) {
         return -1;
@@ -137,7 +137,7 @@ static int
 
 TEMPLATE_METHOD_NOARGS = """
 static PyObject *
-%%clsname%%Proxy_%%methname%%(%%clsname%%Proxy *self)
+%%clsname%%_%%methname%%(%%clsname%%_Struct *self)
 {
     %%retvalassign%%[self->objc_ref %%methname%%];
     %%retvalreturn%%
@@ -146,7 +146,7 @@ static PyObject *
 
 TEMPLATE_METHOD_VARARGS = """
 static PyObject *
-%%clsname%%Proxy_%%methname%%(%%clsname%%Proxy *self, PyObject *args)
+%%clsname%%_%%methname%%(%%clsname%%_Struct *self, PyObject *args)
 {
     PyObject %%argliststar%%;
     if (!PyArg_ParseTuple(args, "%%argfmt%%", %%arglistamp%%)) {
@@ -160,7 +160,7 @@ static PyObject *
 """
 
 TEMPLATE_METHODDEF = """
-{"%%methname%%", (PyCFunction)%%clsname%%Proxy_%%methname%%, %%methtype%%, ""},
+{"%%methname%%", (PyCFunction)%%clsname%%_%%methname%%, %%methtype%%, ""},
 """
 
 def parse_objc_header(header):
@@ -187,6 +187,8 @@ def parse_objc_header(header):
     return (clsname, method_specs)
 
 def generate_python_proxy_code(header_path, destpath):
+    # The name of the file in destpath will determine the name of the module. For example,
+    # "foo/bar.m" will result in a module name "bar".
     with open(header_path, 'rt') as fp:
         header = fp.read()
     clsname, method_specs = parse_objc_header(header)
@@ -224,8 +226,10 @@ def generate_python_proxy_code(header_path, destpath):
         tmpl_methodsdef.append(tmpl_replace(TEMPLATE_METHODDEF, clsname=clsname, **tmplval))
     tmpl_methods = ''.join(tmpl_methods)
     tmpl_methodsdef = ''.join(tmpl_methodsdef)
-    result = tmpl_replace(TEMPLATE_UNIT, clsname=clsname, objcinterface=header,
-        initfunc=tmpl_initfunc, methods=tmpl_methods, methodsdef=tmpl_methodsdef)
+    modulename = op.splitext(op.basename(destpath))[0]
+    result = tmpl_replace(TEMPLATE_UNIT, clsname=clsname, modulename=modulename,
+        objcinterface=header, initfunc=tmpl_initfunc, methods=tmpl_methods,
+        methodsdef=tmpl_methodsdef)
     copy_objp_unit(op.dirname(destpath))
     with open(destpath, 'wt') as fp:
         fp.write(result)
