@@ -2,8 +2,8 @@ class Simple:
     def hello_(self, name: str):
         print("Hello %s!" % name)
         print("Now, let's try a hello from ObjC...")
-        from ObjCHelloProxy import ObjCHelloProxy
-        proxy = ObjCHelloProxy()
+        from ObjCHello import ObjCHello
+        proxy = ObjCHello()
         proxy.helloToName_(name)
         print("Oh, and also: the answer to life is %d" % proxy.answerToLife())
         print("Additionally, a dict of all answers supported by our awesome app: %r" % proxy.answersDict())

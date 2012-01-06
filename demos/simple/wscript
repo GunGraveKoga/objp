@@ -25,11 +25,11 @@ def build(bld):
     import objp.p2o
     import simple
     objp.o2p.generate_objc_code(simple.Simple, 'autogen')
-    objp.p2o.generate_python_proxy_code('ObjCHello.h', 'autogen/ObjCHelloProxy.m')
+    objp.p2o.generate_python_proxy_code('ObjCHello.h', 'autogen/ObjCHello.m')
     bld(
         features = 'c cshlib pyext',
-        source   = 'autogen/ObjCHelloProxy.m',
-        target   = 'ObjCHelloProxy')
+        source   = 'autogen/ObjCHello.m',
+        target   = 'ObjCHello')
     
     bld.program(
         features      = 'c cprogram pyembed',

@@ -3,18 +3,22 @@ import os.path as op
 import shutil
 from collections import namedtuple
 
-TypeSpec = namedtuple('TypeSpec', 'objctype o2p_code p2o_code')
+TypeSpec = namedtuple('TypeSpec', 'pytype objctype o2p_code p2o_code')
+ArgSpec = namedtuple('ArgSpec', 'argname typespec')
+MethodSpec = namedtuple('MethodSpec', 'methodname argspecs returntype')
+ClassSpec = namedtuple('ClassSpec', 'clsname methodspecs')
 
-TYPE_SPECS = {
-    str: TypeSpec('NSString *', 'ObjP_str_o2p(%s)', 'ObjP_str_p2o(%s)'),
-    int: TypeSpec('NSInteger', 'ObjP_int_o2p(%s)', 'ObjP_int_p2o(%s)'),
-    bool: TypeSpec('BOOL', 'ObjP_bool_o2p(%s)', 'ObjP_bool_p2o(%s)'),
-    object: TypeSpec('id', 'ObjP_obj_o2p(%s)', 'ObjP_obj_p2o(%s)'),
-    list: TypeSpec('NSArray *', 'ObjP_list_o2p(%s)', 'ObjP_list_p2o(%s)'),
-    dict: TypeSpec('NSDictionary *', 'ObjP_dict_o2p(%s)', 'ObjP_dict_p2o(%s)'),
-}
+TYPE_SPECS = [
+    TypeSpec(str, 'NSString *', 'ObjP_str_o2p(%s)', 'ObjP_str_p2o(%s)'),
+    TypeSpec(int, 'NSInteger', 'ObjP_int_o2p(%s)', 'ObjP_int_p2o(%s)'),
+    TypeSpec(bool, 'BOOL', 'ObjP_bool_o2p(%s)', 'ObjP_bool_p2o(%s)'),
+    TypeSpec(object, 'id', 'ObjP_obj_o2p(%s)', 'ObjP_obj_p2o(%s)'),
+    TypeSpec(list, 'NSArray *', 'ObjP_list_o2p(%s)', 'ObjP_list_p2o(%s)'),
+    TypeSpec(dict, 'NSDictionary *', 'ObjP_dict_o2p(%s)', 'ObjP_dict_p2o(%s)'),
+]
 
-TYPE_SPECS_REVERSED = {ts.objctype: ts for ts in TYPE_SPECS.values()}
+PYTYPE2SPEC = {ts.pytype: ts for ts in TYPE_SPECS}
+OBJCTYPE2SPEC = {ts.objctype: ts for ts in TYPE_SPECS}
 
 DATA_PATH = op.join(op.dirname(__file__), 'data')
 

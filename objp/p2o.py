@@ -1,6 +1,6 @@
 import re
 import os.path as op
-from .base import tmpl_replace, TYPE_SPECS_REVERSED, copy_objp_unit
+from .base import tmpl_replace, OBJCTYPE2SPEC, copy_objp_unit, ArgSpec, MethodSpec, ClassSpec
 
 TEMPLATE_UNIT = """
 #define PY_SSIZE_T_CLEAN
@@ -164,7 +164,6 @@ TEMPLATE_METHODDEF = """
 """
 
 def parse_objc_header(header):
-    # returns (clsname, [(methodname, resulttype, [(argname, argtype)])])
     re_class = re.compile(r"@interface\s+(\w*?)\s*:\s*\w*?.*?{.*?}(.*?)@end", re.MULTILINE | re.DOTALL)
     match = re_class.search(header)
     assert match is not None
@@ -174,47 +173,56 @@ def parse_objc_header(header):
     method_specs = []
     re_method_elems = re.compile(r"(\w+)\s*:\s*\(\s*(\w+?\s*\*?)\s*\)\s*(\w+)")
     for resulttype, rest in methods:
+        if resulttype == 'void':
+            resulttype = None
+        else:
+            resulttype = OBJCTYPE2SPEC[resulttype]
         elems = re_method_elems.findall(rest)
+        args = []
         if not elems: # no arguments
             name = rest
-            args = []
         else:
             name = ':'.join(elem[0] for elem in elems)
             if not name.endswith(':'):
                 name += ':'
-            args = [(elem[2], elem[1]) for elem in elems]
-        method_specs.append((name, resulttype, args))
-    return (clsname, method_specs)
+            for elem in elems:
+                argname = elem[2]
+                argtype = OBJCTYPE2SPEC[elem[1]]
+                args.append(ArgSpec(argname, argtype))
+        method_specs.append(MethodSpec(name, args, resulttype))
+    return ClassSpec(clsname, method_specs)
 
 def generate_python_proxy_code(header_path, destpath):
     # The name of the file in destpath will determine the name of the module. For example,
     # "foo/bar.m" will result in a module name "bar".
     with open(header_path, 'rt') as fp:
         header = fp.read()
-    clsname, method_specs = parse_objc_header(header)
+    clsspec = parse_objc_header(header)
+    clsname = clsspec.clsname
     tmpl_initfunc = tmpl_replace(TEMPLATE_INITFUNC_CREATE, clsname=clsname)
     tmpl_methods = []
     tmpl_methodsdef = []
-    for methodname, resulttype, args in method_specs:
+    for methodname, args, resulttype in clsspec.methodspecs:
         tmplval = {}
         tmplval['methname'] = methodname.replace(':', '_')
-        if resulttype == 'void':
+        if resulttype is None:
             tmplval['retvalassign'] = ''
             tmplval['retvalreturn'] = 'Py_RETURN_NONE;'
         else:
-            ts = TYPE_SPECS_REVERSED[resulttype]
-            tmplval['retvalassign'] = '%s retval = ' % ts.objctype
+            tmplval['retvalassign'] = '%s retval = ' % resulttype.objctype
             fmt = 'PyObject *pResult = %s; return pResult;'
-            tmplval['retvalreturn'] = fmt % (ts.o2p_code % 'retval')
+            tmplval['retvalreturn'] = fmt % (resulttype.o2p_code % 'retval')
         if args:
+            argnames = [arg.argname for arg in args]
             tmplval['methtype'] = 'METH_VARARGS'
-            tmplval['argliststar'] = ', '.join('*p'+name for name, _ in args)
-            tmplval['arglistamp'] = ', '.join('&p'+name for name, _ in args)
+            tmplval['argliststar'] = ', '.join('*p'+name for name in argnames)
+            tmplval['arglistamp'] = ', '.join('&p'+name for name in argnames)
             tmplval['argfmt'] = 'O' * len(args)
             conversion = []
-            for name, type in args:
-                ts = TYPE_SPECS_REVERSED[type]
-                conversion.append('%s %s = %s;' % (type, name, ts.p2o_code % ('p'+name)))
+            for arg in args:
+                name = arg.argname
+                ts = arg.typespec
+                conversion.append('%s %s = %s;' % (ts.objctype, name, ts.p2o_code % ('p'+name)))
             tmplval['conversion'] = '\n'.join(conversion)
             elems = methodname.split(':')
             elems_and_args = [elem + ':' + argname for elem, (argname, _) in zip(elems, args)]
