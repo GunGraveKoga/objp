@@ -7,6 +7,7 @@ TEMPLATE_HEADER = """
 #import "ObjP.h"
 
 @interface %%classname%%:OPProxy {}
+- (id)initWithPyArgs:(PyObject *)args;
 %%methods%%
 @end
 """
@@ -15,10 +16,15 @@ TEMPLATE_UNIT = """
 #import "%%classname%%.h"
 
 @implementation %%classname%%
+- (id)initWithPyArgs:(PyObject *)args
+{
+    self = [super initwithClassName:@"%%classname%%" pyArgs:args];
+    return self;
+}
+
 - (id)init
 {
-    self = [super initwithClassName:@"%%classname%%"];
-    return self;
+    return [self initWithPyArgs:NULL];
 }
 
 %%methods%%

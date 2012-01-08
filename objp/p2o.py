@@ -125,11 +125,17 @@ TEMPLATE_INITFUNC_CREATE = """
 static int
 %%clsname%%_init(%%clsname%%_Struct *self, PyObject *args, PyObject *kwds)
 {
-    if (!PyArg_ParseTuple(args, "")) {
+    PyObject *pRefCapsule = NULL;
+    if (!PyArg_ParseTuple(args, "|O", &pRefCapsule)) {
         return -1;
     }
     
-    self->objc_ref = [[%%clsname%% alloc] init];
+    if (pRefCapsule == NULL) {
+        self->objc_ref = [[%%clsname%% alloc] init];
+    }
+    else {
+        self->objc_ref = PyCapsule_GetPointer(pRefCapsule, NULL);
+    }
     
     return 0;
 }
