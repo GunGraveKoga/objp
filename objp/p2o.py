@@ -12,7 +12,7 @@ TEMPLATE_UNIT = """
 
 typedef struct {
     PyObject_HEAD
-    %%clsname%% *objc_ref;
+    %%typedecl%%objc_ref;
 } %%clsname%%_Struct;
 
 static PyTypeObject %%clsname%%_Type; /* Forward declaration */
@@ -131,10 +131,11 @@ static int
     }
     
     if (pRefCapsule == NULL) {
-        self->objc_ref = [[%%clsname%% alloc] init];
+        self->objc_ref = %%objc_create%%
     }
     else {
         self->objc_ref = PyCapsule_GetPointer(pRefCapsule, NULL);
+        [self->objc_ref retain];
     }
     
     return 0;
@@ -170,8 +171,13 @@ TEMPLATE_METHODDEF = """
 """
 
 def parse_objc_header(header):
+    is_protocol = False
     re_class = re.compile(r"@interface\s+(\w*?)\s*:\s*\w*?.*?{.*?}(.*?)@end", re.MULTILINE | re.DOTALL)
     match = re_class.search(header)
+    if match is None:
+        re_protocol = re.compile(r"@protocol\s+(\w*).*?\n+(.*?)@end", re.MULTILINE | re.DOTALL)
+        match = re_protocol.search(header)
+        is_protocol = True
     assert match is not None
     clsname, methods = match.groups()
     re_method = re.compile(r"-\s*\(\s*([\w *]+?)\s*\)(.+?);")
@@ -196,7 +202,7 @@ def parse_objc_header(header):
                 argtype = OBJCTYPE2SPEC[elem[1]]
                 args.append(ArgSpec(argname, argtype))
         method_specs.append(MethodSpec(name, args, resulttype))
-    return ClassSpec(clsname, method_specs)
+    return ClassSpec(clsname, method_specs, is_protocol)
 
 def generate_python_proxy_code(header_path, destpath):
     # The name of the file in destpath will determine the name of the module. For example,
@@ -205,7 +211,12 @@ def generate_python_proxy_code(header_path, destpath):
         header = fp.read()
     clsspec = parse_objc_header(header)
     clsname = clsspec.clsname
-    tmpl_initfunc = tmpl_replace(TEMPLATE_INITFUNC_CREATE, clsname=clsname)
+    if clsspec.is_protocol:
+        tmpl_objc_create = "NULL; // Never supposed to happen"
+    else:
+        tmpl_objc_create = "[[%s alloc] init];" % clsname
+    tmpl_initfunc = tmpl_replace(TEMPLATE_INITFUNC_CREATE, clsname=clsname,
+        objc_create=tmpl_objc_create)
     tmpl_methods = []
     tmpl_methodsdef = []
     for methodname, args, resulttype in clsspec.methodspecs:
@@ -241,8 +252,9 @@ def generate_python_proxy_code(header_path, destpath):
     tmpl_methods = ''.join(tmpl_methods)
     tmpl_methodsdef = ''.join(tmpl_methodsdef)
     modulename = op.splitext(op.basename(destpath))[0]
+    typedecl = "id <%s>" % clsname if clsspec.is_protocol else "%s *" % clsname
     result = tmpl_replace(TEMPLATE_UNIT, clsname=clsname, modulename=modulename,
-        objcinterface=header, initfunc=tmpl_initfunc, methods=tmpl_methods,
+        typedecl=typedecl, objcinterface=header, initfunc=tmpl_initfunc, methods=tmpl_methods,
         methodsdef=tmpl_methodsdef)
     copy_objp_unit(op.dirname(destpath))
     with open(destpath, 'wt') as fp:

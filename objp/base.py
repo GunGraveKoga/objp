@@ -6,7 +6,7 @@ from collections import namedtuple
 TypeSpec = namedtuple('TypeSpec', 'pytype objctype o2p_code p2o_code')
 ArgSpec = namedtuple('ArgSpec', 'argname typespec')
 MethodSpec = namedtuple('MethodSpec', 'methodname argspecs returntype')
-ClassSpec = namedtuple('ClassSpec', 'clsname methodspecs')
+ClassSpec = namedtuple('ClassSpec', 'clsname methodspecs is_protocol')
 
 TYPE_SPECS = [
     TypeSpec(str, 'NSString *', 'ObjP_str_o2p(%s)', 'ObjP_str_p2o(%s)'),

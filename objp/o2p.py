@@ -36,7 +36,7 @@ TEMPLATE_METHOD = """
 {
     PyObject *pResult, *pMethodName;
     pMethodName = PyUnicode_FromString("%%pyname%%");
-    pResult = PyObject_CallMethodObjArgs(py, pMethodName, %%args%%, NULL);
+    pResult = PyObject_CallMethodObjArgs(py, pMethodName, %%args%%);
     Py_DECREF(pMethodName);
     %%returncode%%
 }
@@ -79,6 +79,7 @@ def get_objc_method_code(methodspec):
     tmpl_args = []
     for arg in methodspec.argspecs:
         tmpl_args.append(arg.typespec.o2p_code % arg.argname)
+    tmpl_args.append('NULL') # We have to add a NULL item in va_args in PyObject_CallMethodObjArgs
     tmpl_args = ', '.join(tmpl_args)
     if methodspec.returntype is not None:
         ts = methodspec.returntype
@@ -102,7 +103,7 @@ def spec_from_python_class(class_):
         except AssertionError:
             print("Warning: Couldn't generate spec for %s" % name)
             continue
-    return ClassSpec(class_.__name__, methodspecs)
+    return ClassSpec(class_.__name__, methodspecs, False)
 
 def generate_objc_code(class_, destfolder):
     # returns (header, implementation)
