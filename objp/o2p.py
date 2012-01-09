@@ -12,7 +12,6 @@ TEMPLATE_HEADER = """
 {
     PyObject *py;
 }
-- (id)initWithPyArgs:(PyObject *)args;
 - (PyObject *)pyRef;
 %%methods%%
 @end
@@ -23,20 +22,6 @@ TEMPLATE_UNIT = """
 #import "ObjP.h"
 
 @implementation %%classname%%
-- (id)initWithPyArgs:(PyObject *)args
-{
-    self = [super init];
-    PyObject *pClass = ObjP_findPythonClass(@"%%classname%%", nil);
-    py = PyObject_CallObject(pClass, args);
-    Py_DECREF(pClass);
-    return self;
-}
-
-- (id)init
-{
-    return [self initWithPyArgs:NULL];
-}
-
 - (void)dealloc
 {
     Py_DECREF(py);
@@ -50,6 +35,17 @@ TEMPLATE_UNIT = """
 
 %%methods%%
 @end
+"""
+
+TEMPLATE_INIT_METHOD = """
+- %%signature%%
+{
+    self = [super init];
+    PyObject *pClass = ObjP_findPythonClass(@"%%classname%%", nil);
+    py = PyObject_CallFunctionObjArgs(pClass, %%args%%);
+    Py_DECREF(pClass);
+    return self;
+}
 """
 
 TEMPLATE_METHOD = """
@@ -85,23 +81,29 @@ def internalize_argspec(name, argspec):
         returntype = None
     return MethodSpec(name, argspecs, returntype)
 
-def get_objc_signature(methodspec):
-    name_elems = methodspec.methodname.split('_')
+def get_objc_signature(methodspec, methodname=None, returntype=None):
+    if methodname is None:
+        methodname = methodspec.methodname
+    if returntype is None:
+        returntype = methodspec.returntype
+    name_elems = methodname.split('_')
     assert len(name_elems) == len(methodspec.argspecs) + 1
-    returntype = methodspec.returntype
     returntype = returntype.objctype if returntype is not None else 'void'
     result_elems = ['(%s)' % returntype, name_elems[0]]
     for name_elem, arg in zip(name_elems[1:], methodspec.argspecs):
         result_elems.append(':(%s)%s %s' % (arg.typespec.objctype, arg.argname, name_elem))
     return ''.join(result_elems).strip()
 
+def get_arg_c_code(argspecs):
+    result = []
+    for arg in argspecs:
+        result.append(arg.typespec.o2p_code % arg.argname)
+    result.append('NULL') # We have to add a NULL item in va_args in PyObject_CallMethodObjArgs
+    return ', '.join(result)
+
 def get_objc_method_code(methodspec):
     signature = get_objc_signature(methodspec)
-    tmpl_args = []
-    for arg in methodspec.argspecs:
-        tmpl_args.append(arg.typespec.o2p_code % arg.argname)
-    tmpl_args.append('NULL') # We have to add a NULL item in va_args in PyObject_CallMethodObjArgs
-    tmpl_args = ', '.join(tmpl_args)
+    tmpl_args = get_arg_c_code(methodspec.argspecs)
     if methodspec.returntype is not None:
         ts = methodspec.returntype
         tmpl_pyconversion = ts.p2o_code % 'pResult'
@@ -110,6 +112,20 @@ def get_objc_method_code(methodspec):
         returncode = TEMPLATE_RETURN_VOID
     code = tmpl_replace(TEMPLATE_METHOD, signature=signature, pyname=methodspec.methodname,
         args=tmpl_args, returncode=returncode)
+    sig = '- %s;' % signature
+    return (code, sig)
+
+def get_objc_init_code(methodspec, classname):
+    # our signature for init function is constructed based on arg names.
+    argnames = [arg.argname.title() for arg in methodspec.argspecs]
+    if argnames:
+        methodname = 'initWith' + '_'.join(argnames) + '_'
+    else:
+        methodname = 'init'
+    signature = get_objc_signature(methodspec, methodname=methodname, returntype=PYTYPE2SPEC[object])
+    tmpl_args = get_arg_c_code(methodspec.argspecs)
+    code = tmpl_replace(TEMPLATE_INIT_METHOD, signature=signature, args=tmpl_args,
+        classname=classname)
     sig = '- %s;' % signature
     return (code, sig)
 
@@ -124,21 +140,27 @@ def spec_from_python_class(class_):
         except AssertionError:
             print("Warning: Couldn't generate spec for %s" % name)
             continue
+    if not any(ms.methodname == '__init__' for ms in methodspecs):
+        # Always create a default init method.
+        methodspecs.insert(0, MethodSpec('__init__', [], None))
     return ClassSpec(class_.__name__, methodspecs, False)
 
 def generate_objc_code(class_, destfolder, extra_imports=None, follow_protocols=None):
     clsspec = spec_from_python_class(class_)
+    clsname = clsspec.clsname
     method_code = []
     method_sigs = []
     for methodspec in clsspec.methodspecs:
         try:
-            code, sig = get_objc_method_code(methodspec)
+            if methodspec.methodname == '__init__':
+                code, sig = get_objc_init_code(methodspec, clsname)
+            else:
+                code, sig = get_objc_method_code(methodspec)
         except AssertionError:
             print("Warning: Couldn't generate code for %s" % methodspec.methodname)
             continue
         method_code.append(code)
         method_sigs.append(sig)
-    clsname = clsspec.clsname
     if extra_imports:
         tmpl_imports = '\n'.join('#import "%s"' % imp for imp in extra_imports)
     else:

@@ -22,14 +22,12 @@ PyObject* ObjP_findPythonClass(NSString *className, NSString *inModule)
 
 PyObject* ObjP_classInstanceWithRef(NSString *className, NSString *inModule, id ref)
 {
-    PyObject *pClass, *pRefCapsule, *pArgs, *pResult;
+    PyObject *pClass, *pRefCapsule, *pResult;
     pClass = ObjP_findPythonClass(className, inModule);
     pRefCapsule = PyCapsule_New(ref, NULL, NULL);
-    pArgs = PyTuple_Pack(1, pRefCapsule);
-    pResult = PyObject_CallObject(pClass, pArgs);
+    pResult = PyObject_CallFunctionObjArgs(pClass, pRefCapsule, NULL);
     Py_DECREF(pClass);
     Py_DECREF(pRefCapsule);
-    Py_DECREF(pArgs);
     return pResult;
 }
 

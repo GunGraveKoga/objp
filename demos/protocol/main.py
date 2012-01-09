@@ -1,5 +1,7 @@
+from objp.util import pyref
+
 class PyMain:
-    def __init__(self, callback):
+    def __init__(self, callback: pyref):
         self.callback = callback
     
     def execute(self):

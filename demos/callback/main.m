@@ -1,5 +1,5 @@
 #import <Cocoa/Cocoa.h>
-#import <Python.h>
+#import "ObjP.h"
 #import "PyMain.h"
 #import "MyCallback.h"
 
@@ -12,9 +12,8 @@ int main(int argc, char *argv[])
     fclose(fp);
     MyCallback *callback = [[MyCallback alloc] init];
     PyObject *pCallback = ObjP_classInstanceWithRef(@"MyCallback", @"MyCallbackProxy", callback);
-    PyObject *pArgs = PyTuple_Pack(1, pCallback);
-    PyMain *foo = [[PyMain alloc] initWithPyArgs:pArgs];
-    Py_DECREF(pArgs);
+    PyMain *foo = [[PyMain alloc] initWithCallback:pCallback];
+    Py_DECREF(pCallback);
     [foo hello:@"Virgil"];
     [foo release];
     Py_Finalize();

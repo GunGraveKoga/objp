@@ -8,4 +8,4 @@ dist
 .lock*
 .tm_*
 demos/simple/build
-demos/simple/autogen
+demos/*/autogen
