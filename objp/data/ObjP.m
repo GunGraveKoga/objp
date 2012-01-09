@@ -1,33 +1,5 @@
 #import "ObjP.h"
 
-@implementation OPProxy
-- (id)initwithClassName:(NSString *)name pyArgs:(PyObject *)args
-{
-    PyObject *pClass;
-    self = [super init];
-    pClass = ObjP_findPythonClass(name, nil);
-    py = PyObject_CallObject(pClass, args);
-    Py_DECREF(pClass);
-    return self;
-}
-
-- (id)initwithClassName:(NSString *)name
-{
-    return [self initwithClassName:name pyArgs:NULL];
-}
-
-- (void)dealloc
-{
-    Py_DECREF(py);
-    [super dealloc];
-}
-
-- (PyObject *)pyRef
-{
-    return py;
-}
-@end
-
 PyObject* ObjP_findPythonClass(NSString *className, NSString *inModule)
 {
     PyObject *pModule, *pClass;

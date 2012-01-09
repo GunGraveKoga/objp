@@ -4,28 +4,48 @@ import inspect
 from .base import PYTYPE2SPEC, tmpl_replace, copy_objp_unit, ArgSpec, MethodSpec, ClassSpec
 
 TEMPLATE_HEADER = """
-#import "ObjP.h"
+#import <Cocoa/Cocoa.h>
+#import <Python.h>
 %%imports%%
 
-@interface %%classname%%:OPProxy %%protocols%% {}
+@interface %%classname%%:NSObject %%protocols%%
+{
+    PyObject *py;
+}
 - (id)initWithPyArgs:(PyObject *)args;
+- (PyObject *)pyRef;
 %%methods%%
 @end
 """
 
 TEMPLATE_UNIT = """
 #import "%%classname%%.h"
+#import "ObjP.h"
 
 @implementation %%classname%%
 - (id)initWithPyArgs:(PyObject *)args
 {
-    self = [super initwithClassName:@"%%classname%%" pyArgs:args];
+    self = [super init];
+    PyObject *pClass = ObjP_findPythonClass(@"%%classname%%", nil);
+    py = PyObject_CallObject(pClass, args);
+    Py_DECREF(pClass);
     return self;
 }
 
 - (id)init
 {
     return [self initWithPyArgs:NULL];
+}
+
+- (void)dealloc
+{
+    Py_DECREF(py);
+    [super dealloc];
+}
+
+- (PyObject *)pyRef
+{
+    return py;
 }
 
 %%methods%%

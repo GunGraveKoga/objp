@@ -1,16 +1,6 @@
 #import <Cocoa/Cocoa.h>
 #import <Python.h>
 
-@interface OPProxy : NSObject
-{
-    PyObject *py;
-}
-- (id)initwithClassName:(NSString *)name pyArgs:(PyObject *)args;
-- (id)initwithClassName:(NSString *)name;
-- (PyObject *)pyRef;
-@end
-
-// New reference
 PyObject* ObjP_findPythonClass(NSString *name, NSString *inModule);
 PyObject* ObjP_classInstanceWithRef(NSString *className, NSString *inModule, id ref);
 NSString* ObjP_str_p2o(PyObject *pStr);
