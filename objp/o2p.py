@@ -5,8 +5,9 @@ from .base import PYTYPE2SPEC, tmpl_replace, copy_objp_unit, ArgSpec, MethodSpec
 
 TEMPLATE_HEADER = """
 #import "ObjP.h"
+%%imports%%
 
-@interface %%classname%%:OPProxy {}
+@interface %%classname%%:OPProxy %%protocols%% {}
 - (id)initWithPyArgs:(PyObject *)args;
 %%methods%%
 @end
@@ -105,17 +106,29 @@ def spec_from_python_class(class_):
             continue
     return ClassSpec(class_.__name__, methodspecs, False)
 
-def generate_objc_code(class_, destfolder):
-    # returns (header, implementation)
+def generate_objc_code(class_, destfolder, extra_imports=None, follow_protocols=None):
     clsspec = spec_from_python_class(class_)
     method_code = []
     method_sigs = []
     for methodspec in clsspec.methodspecs:
-        code, sig = get_objc_method_code(methodspec)
+        try:
+            code, sig = get_objc_method_code(methodspec)
+        except AssertionError:
+            print("Warning: Couldn't generate code for %s" % methodspec.methodname)
+            continue
         method_code.append(code)
         method_sigs.append(sig)
     clsname = clsspec.clsname
-    header = tmpl_replace(TEMPLATE_HEADER, classname=clsname, methods='\n'.join(method_sigs))
+    if extra_imports:
+        tmpl_imports = '\n'.join('#import "%s"' % imp for imp in extra_imports)
+    else:
+        tmpl_imports = ''
+    if follow_protocols:
+        tmpl_protocols = '<%s>' % ','.join(follow_protocols)
+    else:
+        tmpl_protocols = ''
+    header = tmpl_replace(TEMPLATE_HEADER, classname=clsname, methods='\n'.join(method_sigs),
+        imports=tmpl_imports, protocols=tmpl_protocols)
     implementation = tmpl_replace(TEMPLATE_UNIT, classname=clsname, methods=''.join(method_code))
     copy_objp_unit(destfolder)
     with open(op.join(destfolder, '%s.h' % clsname), 'wt') as fp:
