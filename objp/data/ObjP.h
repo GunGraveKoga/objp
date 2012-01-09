@@ -7,6 +7,7 @@
 }
 - (id)initwithClassName:(NSString *)name pyArgs:(PyObject *)args;
 - (id)initwithClassName:(NSString *)name;
+- (PyObject *)pyRef;
 @end
 
 // New reference

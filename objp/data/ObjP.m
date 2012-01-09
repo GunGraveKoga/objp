@@ -21,6 +21,11 @@
     Py_DECREF(py);
     [super dealloc];
 }
+
+- (PyObject *)pyRef
+{
+    return py;
+}
 @end
 
 PyObject* ObjP_findPythonClass(NSString *className, NSString *inModule)

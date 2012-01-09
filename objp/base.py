@@ -3,6 +3,8 @@ import os.path as op
 import shutil
 from collections import namedtuple
 
+from .util import pyref
+
 TypeSpec = namedtuple('TypeSpec', 'pytype objctype o2p_code p2o_code')
 ArgSpec = namedtuple('ArgSpec', 'argname typespec')
 MethodSpec = namedtuple('MethodSpec', 'methodname argspecs returntype')
@@ -15,6 +17,7 @@ TYPE_SPECS = [
     TypeSpec(object, 'id', 'ObjP_obj_o2p(%s)', 'ObjP_obj_p2o(%s)'),
     TypeSpec(list, 'NSArray *', 'ObjP_list_o2p(%s)', 'ObjP_list_p2o(%s)'),
     TypeSpec(dict, 'NSDictionary *', 'ObjP_dict_o2p(%s)', 'ObjP_dict_p2o(%s)'),
+    TypeSpec(pyref, 'PyObject *', '%s', '%s'),
 ]
 
 PYTYPE2SPEC = {ts.pytype: ts for ts in TYPE_SPECS}
