@@ -146,7 +146,9 @@ TEMPLATE_METHOD_NOARGS = """
 static PyObject *
 %%clsname%%_%%methname%%(%%clsname%%_Struct *self)
 {
+    PyThreadState *_save; _save = PyEval_SaveThread();
     %%retvalassign%%[self->objc_ref %%methname%%];
+    PyEval_RestoreThread(_save);
     %%retvalreturn%%
 }
 """
@@ -161,7 +163,9 @@ static PyObject *
     }
     %%conversion%%
     
+    PyThreadState *_save; _save = PyEval_SaveThread();
     %%retvalassign%%[self->objc_ref %%methcall%%];
+    PyEval_RestoreThread(_save);
     %%retvalreturn%%
 }
 """

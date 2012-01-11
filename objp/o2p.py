@@ -24,7 +24,9 @@ TEMPLATE_UNIT = """
 @implementation %%classname%%
 - (void)dealloc
 {
+    PyGILState_STATE gilState = PyGILState_Ensure();
     Py_DECREF(py);
+    PyGILState_Release(gilState);
     [super dealloc];
 }
 
@@ -41,9 +43,11 @@ TEMPLATE_INIT_METHOD = """
 - %%signature%%
 {
     self = [super init];
+    PyGILState_STATE gilState = PyGILState_Ensure();
     PyObject *pClass = ObjP_findPythonClass(@"%%classname%%", nil);
     py = PyObject_CallFunctionObjArgs(pClass, %%args%%);
     Py_DECREF(pClass);
+    PyGILState_Release(gilState);
     return self;
 }
 """
@@ -52,6 +56,7 @@ TEMPLATE_METHOD = """
 - %%signature%%
 {
     PyObject *pResult, *pMethodName;
+    PyGILState_STATE gilState = PyGILState_Ensure();
     pMethodName = PyUnicode_FromString("%%pyname%%");
     pResult = PyObject_CallMethodObjArgs(py, pMethodName, %%args%%);
     Py_DECREF(pMethodName);
@@ -59,11 +64,17 @@ TEMPLATE_METHOD = """
 }
 """
 
-TEMPLATE_RETURN_VOID = "Py_DECREF(pResult);"
-
-TEMPLATE_RETURN = """%%type%% result = %%pyconversion%%;
+TEMPLATE_RETURN_VOID = """
     Py_DECREF(pResult);
-    return result;"""
+    PyGILState_Release(gilState);
+"""
+
+TEMPLATE_RETURN = """
+    %%type%% result = %%pyconversion%%;
+    Py_DECREF(pResult);
+    PyGILState_Release(gilState);
+    return result;
+"""
 
 def internalize_argspec(name, argspec):
     # take argspec from the inspect module and returns MethodSpec
