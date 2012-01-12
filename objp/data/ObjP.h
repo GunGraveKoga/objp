@@ -1,8 +1,11 @@
 #import <Cocoa/Cocoa.h>
 #import <Python.h>
 
+#define OBJP_ERRCHECK(x) if (x == NULL) {ObjP_raisePyExceptionInCocoa();}
+
 PyObject* ObjP_findPythonClass(NSString *name, NSString *inModule);
 PyObject* ObjP_classInstanceWithRef(NSString *className, NSString *inModule, id ref);
+void ObjP_raisePyExceptionInCocoa(void);
 NSString* ObjP_str_p2o(PyObject *pStr);
 PyObject* ObjP_str_o2p(NSString *str);
 NSInteger ObjP_int_p2o(PyObject *pInt);

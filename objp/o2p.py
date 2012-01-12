@@ -46,6 +46,7 @@ TEMPLATE_INIT_METHOD = """
     PyGILState_STATE gilState = PyGILState_Ensure();
     PyObject *pClass = ObjP_findPythonClass(@"%%classname%%", nil);
     py = PyObject_CallFunctionObjArgs(pClass, %%args%%);
+    OBJP_ERRCHECK(py);
     Py_DECREF(pClass);
     PyGILState_Release(gilState);
     return self;
@@ -58,7 +59,9 @@ TEMPLATE_METHOD = """
     PyObject *pResult, *pMethodName;
     PyGILState_STATE gilState = PyGILState_Ensure();
     pMethodName = PyUnicode_FromString("%%pyname%%");
+    OBJP_ERRCHECK(pMethodName);
     pResult = PyObject_CallMethodObjArgs(py, pMethodName, %%args%%);
+    OBJP_ERRCHECK(pResult);
     Py_DECREF(pMethodName);
     %%returncode%%
 }
