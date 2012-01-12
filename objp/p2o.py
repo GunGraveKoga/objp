@@ -1,6 +1,7 @@
 import re
 import os.path as op
-from .base import tmpl_replace, OBJCTYPE2SPEC, copy_objp_unit, ArgSpec, MethodSpec, ClassSpec
+from .base import (tmpl_replace, OBJCTYPE2SPEC, copy_objp_unit, ArgSpec, MethodSpec, ClassSpec,
+    get_objc_signature)
 
 TEMPLATE_UNIT = """
 #define PY_SSIZE_T_CLEAN
@@ -121,6 +122,12 @@ PyInit_%%modulename%%(void)
 
 """
 
+TEMPLATE_TARGET_PROTOCOL = """
+@protocol %%clsname%% <NSObject>
+%%methods%%
+@end
+"""
+
 TEMPLATE_INITFUNC_CREATE = """
 static int
 %%clsname%%_init(%%clsname%%_Struct *self, PyObject *args, PyObject *kwds)
@@ -205,15 +212,18 @@ def parse_objc_header(header):
                 argname = elem[2]
                 argtype = OBJCTYPE2SPEC[elem[1]]
                 args.append(ArgSpec(argname, argtype))
-        method_specs.append(MethodSpec(name, args, resulttype))
+        pyname = name.replace(':', '_')
+        method_specs.append(MethodSpec(pyname, name, args, resulttype))
     return ClassSpec(clsname, method_specs, is_protocol)
 
-def generate_python_proxy_code(header_path, destpath):
-    # The name of the file in destpath will determine the name of the module. For example,
-    # "foo/bar.m" will result in a module name "bar".
-    with open(header_path, 'rt') as fp:
-        header = fp.read()
-    clsspec = parse_objc_header(header)
+def generate_target_protocol(clsspec):
+    clsname = clsspec.clsname
+    signatures = ['- %s;' % get_objc_signature(methodspec) for methodspec in clsspec.methodspecs]
+    return tmpl_replace(TEMPLATE_TARGET_PROTOCOL, clsname=clsname, methods='\n'.join(signatures))
+
+def generate_python_proxy_code_from_clsspec(clsspec, destpath, objcinterface=None):
+    if objcinterface is None:
+        objcinterface = generate_target_protocol(clsspec)
     clsname = clsspec.clsname
     if clsspec.is_protocol:
         tmpl_objc_create = "NULL; // Never supposed to happen"
@@ -223,9 +233,9 @@ def generate_python_proxy_code(header_path, destpath):
         objc_create=tmpl_objc_create)
     tmpl_methods = []
     tmpl_methodsdef = []
-    for methodname, args, resulttype in clsspec.methodspecs:
+    for pyname, objcname, args, resulttype in clsspec.methodspecs:
         tmplval = {}
-        tmplval['methname'] = methodname.replace(':', '_')
+        tmplval['methname'] = pyname
         if resulttype is None:
             tmplval['retvalassign'] = ''
             tmplval['retvalreturn'] = 'Py_RETURN_NONE;'
@@ -245,7 +255,7 @@ def generate_python_proxy_code(header_path, destpath):
                 ts = arg.typespec
                 conversion.append('%s %s = %s;' % (ts.objctype, name, ts.p2o_code % ('p'+name)))
             tmplval['conversion'] = '\n'.join(conversion)
-            elems = methodname.split(':')
+            elems = objcname.split(':')
             elems_and_args = [elem + ':' + argname for elem, (argname, _) in zip(elems, args)]
             tmplval['methcall'] = ' '.join(elems_and_args)
             tmpl_methods.append(tmpl_replace(TEMPLATE_METHOD_VARARGS, clsname=clsname, **tmplval))
@@ -258,9 +268,17 @@ def generate_python_proxy_code(header_path, destpath):
     modulename = op.splitext(op.basename(destpath))[0]
     typedecl = "id <%s>" % clsname if clsspec.is_protocol else "%s *" % clsname
     result = tmpl_replace(TEMPLATE_UNIT, clsname=clsname, modulename=modulename,
-        typedecl=typedecl, objcinterface=header, initfunc=tmpl_initfunc, methods=tmpl_methods,
+        typedecl=typedecl, objcinterface=objcinterface, initfunc=tmpl_initfunc, methods=tmpl_methods,
         methodsdef=tmpl_methodsdef)
     copy_objp_unit(op.dirname(destpath))
     with open(destpath, 'wt') as fp:
         fp.write(result)
+
+def generate_python_proxy_code(header_path, destpath):
+    # The name of the file in destpath will determine the name of the module. For example,
+    # "foo/bar.m" will result in a module name "bar".
+    with open(header_path, 'rt') as fp:
+        header = fp.read()
+    clsspec = parse_objc_header(header)
+    generate_python_proxy_code_from_clsspec(clsspec, destpath, header)
     

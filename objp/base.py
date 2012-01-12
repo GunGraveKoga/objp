@@ -7,7 +7,7 @@ from .util import pyref
 
 TypeSpec = namedtuple('TypeSpec', 'pytype objctype o2p_code p2o_code')
 ArgSpec = namedtuple('ArgSpec', 'argname typespec')
-MethodSpec = namedtuple('MethodSpec', 'methodname argspecs returntype')
+MethodSpec = namedtuple('MethodSpec', 'pyname objcname argspecs returntype')
 ClassSpec = namedtuple('ClassSpec', 'clsname methodspecs is_protocol')
 
 TYPE_SPECS = [
@@ -33,6 +33,17 @@ def tmpl_replace(tmpl, **replacments):
     for placeholder, replacement in replacments.items():
         result = result.replace('%%{}%%'.format(placeholder), replacement)
     return result
+
+def get_objc_signature(methodspec):
+    methodname = methodspec.objcname
+    returntype = methodspec.returntype
+    name_elems = methodname.split(':')
+    assert len(name_elems) == len(methodspec.argspecs) + 1
+    returntype = returntype.objctype if returntype is not None else 'void'
+    result_elems = ['(%s)' % returntype, name_elems[0]]
+    for name_elem, arg in zip(name_elems[1:], methodspec.argspecs):
+        result_elems.append(':(%s)%s %s' % (arg.typespec.objctype, arg.argname, name_elem))
+    return ''.join(result_elems).strip()
 
 def copy_objp_unit(destfolder):
     if not op.exists(destfolder):

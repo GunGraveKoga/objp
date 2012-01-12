@@ -1,3 +1,5 @@
+from objp.util import dontwrap
+
 class Simple:
     def hello_(self, name: str):
         print("Hello %s!" % name)
@@ -14,3 +16,6 @@ class Simple:
     def doubleNumbers_(self, numbers: list) -> list:
         return [i*2 for i in numbers]
     
+    @dontwrap
+    def foobar(self):
+        print("This method shouldn't be wrapped by objp because we tell it so.")

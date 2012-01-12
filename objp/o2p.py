@@ -1,7 +1,8 @@
 import os.path as op
 import inspect
 
-from .base import PYTYPE2SPEC, tmpl_replace, copy_objp_unit, ArgSpec, MethodSpec, ClassSpec
+from .base import (PYTYPE2SPEC, tmpl_replace, copy_objp_unit, ArgSpec, MethodSpec, ClassSpec,
+    get_objc_signature)
 
 TEMPLATE_HEADER = """
 #import <Cocoa/Cocoa.h>
@@ -79,6 +80,11 @@ TEMPLATE_RETURN = """
     return result;
 """
 
+def camelcase(s):
+    elems = s.split('_')
+    elems = [elems[0]] + [e.title() for e in elems[1:]]
+    return ''.join(elems)
+
 def internalize_argspec(name, argspec):
     # take argspec from the inspect module and returns MethodSpec
     args = argspec.args[1:] # remove self
@@ -89,24 +95,22 @@ def internalize_argspec(name, argspec):
     for arg in args:
         ts = PYTYPE2SPEC[ann[arg]]
         argspecs.append(ArgSpec(arg, ts))
-    if 'return' in ann:
-        returntype = PYTYPE2SPEC[ann['return']]
+    if name == '__init__':
+        # generate objcname from args and always have an object return type
+        returntype = PYTYPE2SPEC[object]
+        if argspecs:
+            argnames = [camelcase(arg.argname) for arg in argspecs]
+            argnames[0] = argnames[0].title()
+            objcname = 'initWith' + ':'.join(argnames) + ':'
+        else:
+            objcname = 'init'
     else:
-        returntype = None
-    return MethodSpec(name, argspecs, returntype)
-
-def get_objc_signature(methodspec, methodname=None, returntype=None):
-    if methodname is None:
-        methodname = methodspec.methodname
-    if returntype is None:
-        returntype = methodspec.returntype
-    name_elems = methodname.split('_')
-    assert len(name_elems) == len(methodspec.argspecs) + 1
-    returntype = returntype.objctype if returntype is not None else 'void'
-    result_elems = ['(%s)' % returntype, name_elems[0]]
-    for name_elem, arg in zip(name_elems[1:], methodspec.argspecs):
-        result_elems.append(':(%s)%s %s' % (arg.typespec.objctype, arg.argname, name_elem))
-    return ''.join(result_elems).strip()
+        if 'return' in ann:
+            returntype = PYTYPE2SPEC[ann['return']]
+        else:
+            returntype = None
+        objcname = name.replace('_', ':')
+    return MethodSpec(name, objcname, argspecs, returntype)
 
 def get_arg_c_code(argspecs):
     result = []
@@ -115,7 +119,7 @@ def get_arg_c_code(argspecs):
     result.append('NULL') # We have to add a NULL item in va_args in PyObject_CallMethodObjArgs
     return ', '.join(result)
 
-def get_objc_method_code(methodspec):
+def get_objc_method_code(clsspec, methodspec):
     signature = get_objc_signature(methodspec)
     tmpl_args = get_arg_c_code(methodspec.argspecs)
     if methodspec.returntype is not None:
@@ -124,22 +128,12 @@ def get_objc_method_code(methodspec):
         returncode = tmpl_replace(TEMPLATE_RETURN, type=ts.objctype, pyconversion=tmpl_pyconversion)
     else:
         returncode = TEMPLATE_RETURN_VOID
-    code = tmpl_replace(TEMPLATE_METHOD, signature=signature, pyname=methodspec.methodname,
-        args=tmpl_args, returncode=returncode)
-    sig = '- %s;' % signature
-    return (code, sig)
-
-def get_objc_init_code(methodspec, classname):
-    # our signature for init function is constructed based on arg names.
-    argnames = [arg.argname.title() for arg in methodspec.argspecs]
-    if argnames:
-        methodname = 'initWith' + '_'.join(argnames) + '_'
+    if methodspec.pyname == '__init__':
+        code = tmpl_replace(TEMPLATE_INIT_METHOD, signature=signature, classname=clsspec.clsname,
+            args=tmpl_args)
     else:
-        methodname = 'init'
-    signature = get_objc_signature(methodspec, methodname=methodname, returntype=PYTYPE2SPEC[object])
-    tmpl_args = get_arg_c_code(methodspec.argspecs)
-    code = tmpl_replace(TEMPLATE_INIT_METHOD, signature=signature, args=tmpl_args,
-        classname=classname)
+        code = tmpl_replace(TEMPLATE_METHOD, signature=signature, pyname=methodspec.pyname,
+            args=tmpl_args, returncode=returncode)
     sig = '- %s;' % signature
     return (code, sig)
 
@@ -147,17 +141,21 @@ def spec_from_python_class(class_):
     methods = inspect.getmembers(class_, inspect.isfunction)
     methodspecs = []
     for name, meth in methods:
+        if getattr(meth, 'dontwrap', False):
+            continue
         argspec = inspect.getfullargspec(meth)
         try:
+            if hasattr(meth, 'objcname'):
+                name = meth.objcname
             methodspec = internalize_argspec(name, argspec)
             methodspecs.append(methodspec)
         except AssertionError:
             print("Warning: Couldn't generate spec for %s" % name)
             continue
-    if not any(ms.methodname == '__init__' for ms in methodspecs):
+    if not any(ms.pyname == '__init__' for ms in methodspecs):
         # Always create a default init method.
-        methodspecs.insert(0, MethodSpec('__init__', [], None))
-    return ClassSpec(class_.__name__, methodspecs, False)
+        methodspecs.insert(0, MethodSpec('__init__', 'init', [], PYTYPE2SPEC[object]))
+    return ClassSpec(class_.__name__, methodspecs, True)
 
 def generate_objc_code(class_, destfolder, extra_imports=None, follow_protocols=None):
     clsspec = spec_from_python_class(class_)
@@ -166,12 +164,9 @@ def generate_objc_code(class_, destfolder, extra_imports=None, follow_protocols=
     method_sigs = []
     for methodspec in clsspec.methodspecs:
         try:
-            if methodspec.methodname == '__init__':
-                code, sig = get_objc_init_code(methodspec, clsname)
-            else:
-                code, sig = get_objc_method_code(methodspec)
+            code, sig = get_objc_method_code(clsspec, methodspec)
         except AssertionError:
-            print("Warning: Couldn't generate code for %s" % methodspec.methodname)
+            print("Warning: Couldn't generate code for %s" % methodspec.pyname)
             continue
         method_code.append(code)
         method_sigs.append(sig)
