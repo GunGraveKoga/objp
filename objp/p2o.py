@@ -213,8 +213,8 @@ def parse_objc_header(header):
                 argtype = OBJCTYPE2SPEC[elem[1]]
                 args.append(ArgSpec(argname, argtype))
         pyname = name.replace(':', '_')
-        method_specs.append(MethodSpec(pyname, name, args, resulttype))
-    return ClassSpec(clsname, method_specs, is_protocol)
+        method_specs.append(MethodSpec(pyname, name, args, resulttype, False))
+    return ClassSpec(clsname, '', method_specs, is_protocol, [])
 
 def generate_target_protocol(clsspec):
     clsname = clsspec.clsname

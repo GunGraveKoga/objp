@@ -18,6 +18,16 @@ TEMPLATE_HEADER = """
 @end
 """
 
+TEMPLATE_HEADER_INHERITED = """
+#import <Cocoa/Cocoa.h>
+#import <Python.h>
+%%imports%%
+
+@interface %%classname%%:%%superclass%% %%protocols%% {}
+%%methods%%
+@end
+"""
+
 TEMPLATE_UNIT = """
 #import "%%classname%%.h"
 #import "ObjP.h"
@@ -36,6 +46,15 @@ TEMPLATE_UNIT = """
     return py;
 }
 
+%%methods%%
+@end
+"""
+
+TEMPLATE_UNIT_INHERITED = """
+#import "%%classname%%.h"
+#import "ObjP.h"
+
+@implementation %%classname%%
 %%methods%%
 @end
 """
@@ -85,7 +104,7 @@ def camelcase(s):
     elems = [elems[0]] + [e.title() for e in elems[1:]]
     return ''.join(elems)
 
-def internalize_argspec(name, argspec):
+def internalize_argspec(name, argspec, is_inherited):
     # take argspec from the inspect module and returns MethodSpec
     args = argspec.args[1:] # remove self
     ann = argspec.annotations
@@ -110,7 +129,7 @@ def internalize_argspec(name, argspec):
         else:
             returntype = None
         objcname = name.replace('_', ':')
-    return MethodSpec(name, objcname, argspecs, returntype)
+    return MethodSpec(name, objcname, argspecs, returntype, is_inherited)
 
 def get_arg_c_code(argspecs):
     result = []
@@ -144,25 +163,30 @@ def spec_from_python_class(class_):
         if getattr(meth, 'dontwrap', False):
             continue
         argspec = inspect.getfullargspec(meth)
+        is_inherited = name not in class_.__dict__
         try:
             if hasattr(meth, 'objcname'):
                 name = meth.objcname
-            methodspec = internalize_argspec(name, argspec)
+            methodspec = internalize_argspec(name, argspec, is_inherited)
             methodspecs.append(methodspec)
         except AssertionError:
             print("Warning: Couldn't generate spec for %s" % name)
             continue
     if not any(ms.pyname == '__init__' for ms in methodspecs):
         # Always create a default init method.
-        methodspecs.insert(0, MethodSpec('__init__', 'init', [], PYTYPE2SPEC[object]))
-    return ClassSpec(class_.__name__, methodspecs, True)
+        methodspecs.insert(0, MethodSpec('__init__', 'init', [], PYTYPE2SPEC[object], True))
+    follow_protocols = getattr(class_, 'FOLLOW_PROTOCOLS', [])
+    superclass = class_.__bases__[0].__name__
+    return ClassSpec(class_.__name__, superclass, methodspecs, True, follow_protocols)
 
-def generate_objc_code(class_, destfolder, extra_imports=None, follow_protocols=None):
+def generate_objc_code(class_, destfolder, inherit=False):
     clsspec = spec_from_python_class(class_)
     clsname = clsspec.clsname
     method_code = []
     method_sigs = []
     for methodspec in clsspec.methodspecs:
+        if inherit and methodspec.is_inherited and methodspec.pyname != '__init__':
+            continue
         try:
             code, sig = get_objc_method_code(clsspec, methodspec)
         except AssertionError:
@@ -170,17 +194,22 @@ def generate_objc_code(class_, destfolder, extra_imports=None, follow_protocols=
             continue
         method_code.append(code)
         method_sigs.append(sig)
-    if extra_imports:
-        tmpl_imports = '\n'.join('#import "%s"' % imp for imp in extra_imports)
-    else:
-        tmpl_imports = ''
-    if follow_protocols:
-        tmpl_protocols = '<%s>' % ','.join(follow_protocols)
+    if clsspec.follow_protocols:
+        tmpl_imports = '\n'.join('#import "%s.h"' % imp for imp in clsspec.follow_protocols)
+        tmpl_protocols = '<%s>' % ','.join(clsspec.follow_protocols)
     else:
         tmpl_protocols = ''
-    header = tmpl_replace(TEMPLATE_HEADER, classname=clsname, methods='\n'.join(method_sigs),
-        imports=tmpl_imports, protocols=tmpl_protocols)
-    implementation = tmpl_replace(TEMPLATE_UNIT, classname=clsname, methods=''.join(method_code))
+        tmpl_imports = ''
+    if inherit:
+        tmpl_superclass = clsspec.superclass
+        tmpl_imports += '\n#import "%s.h"' % clsspec.superclass
+        header = tmpl_replace(TEMPLATE_HEADER_INHERITED, classname=clsname, methods='\n'.join(method_sigs),
+            imports=tmpl_imports, protocols=tmpl_protocols, superclass=tmpl_superclass)
+        implementation = tmpl_replace(TEMPLATE_UNIT_INHERITED, classname=clsname, methods=''.join(method_code))
+    else:
+        header = tmpl_replace(TEMPLATE_HEADER, classname=clsname, methods='\n'.join(method_sigs),
+                imports=tmpl_imports, protocols=tmpl_protocols)
+        implementation = tmpl_replace(TEMPLATE_UNIT, classname=clsname, methods=''.join(method_code))
     copy_objp_unit(destfolder)
     with open(op.join(destfolder, '%s.h' % clsname), 'wt') as fp:
         fp.write(header)

@@ -7,8 +7,8 @@ from .util import pyref
 
 TypeSpec = namedtuple('TypeSpec', 'pytype objctype o2p_code p2o_code')
 ArgSpec = namedtuple('ArgSpec', 'argname typespec')
-MethodSpec = namedtuple('MethodSpec', 'pyname objcname argspecs returntype')
-ClassSpec = namedtuple('ClassSpec', 'clsname methodspecs is_protocol')
+MethodSpec = namedtuple('MethodSpec', 'pyname objcname argspecs returntype is_inherited')
+ClassSpec = namedtuple('ClassSpec', 'clsname superclass methodspecs is_protocol follow_protocols')
 
 TYPE_SPECS = [
     TypeSpec(str, 'NSString *', 'ObjP_str_o2p(%s)', 'ObjP_str_p2o(%s)'),
