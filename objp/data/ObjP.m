@@ -114,13 +114,17 @@ NSObject* ObjP_obj_p2o(PyObject *pObj)
     else if (PyLong_Check(pObj)) {
         return [NSNumber numberWithInt:ObjP_int_p2o(pObj)];
     }
-    else if (PyList_Check(pObj)) {
+    else if (PyBool_Check(pObj)) {
+        return [NSNumber numberWithBool:ObjP_bool_p2o(pObj)];
+    }
+    else if (PySequence_Check(pObj)) {
         return ObjP_list_p2o(pObj);
     }
     else if (PyDict_Check(pObj)) {
         return ObjP_dict_p2o(pObj);
     }
     else {
+        NSLog(@"Warning, ObjP_obj_p2o failed.");
         return nil;
     }
 }
