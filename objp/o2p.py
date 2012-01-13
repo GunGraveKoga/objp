@@ -176,7 +176,7 @@ def spec_from_python_class(class_):
         # Always create a default init method.
         methodspecs.insert(0, MethodSpec('__init__', 'init', [], PYTYPE2SPEC[object], True))
     follow_protocols = getattr(class_, 'FOLLOW_PROTOCOLS', [])
-    superclass = class_.__bases__[0].__name__
+    superclass = class_.__bases__[0].__name__ if class_.__bases__[0] is not object else None
     return ClassSpec(class_.__name__, superclass, methodspecs, True, follow_protocols)
 
 def generate_objc_code(class_, destfolder, inherit=False):
@@ -200,7 +200,7 @@ def generate_objc_code(class_, destfolder, inherit=False):
     else:
         tmpl_protocols = ''
         tmpl_imports = ''
-    if inherit:
+    if inherit and clsspec.superclass:
         tmpl_superclass = clsspec.superclass
         tmpl_imports += '\n#import "%s.h"' % clsspec.superclass
         header = tmpl_replace(TEMPLATE_HEADER_INHERITED, classname=clsname, methods='\n'.join(method_sigs),
