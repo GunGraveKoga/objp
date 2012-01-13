@@ -64,10 +64,9 @@ TEMPLATE_INIT_METHOD = """
 {
     self = [super init];
     PyGILState_STATE gilState = PyGILState_Ensure();
-    PyObject *pClass = ObjP_findPythonClass(@"%%classname%%", nil);
-    py = PyObject_CallFunctionObjArgs(pClass, %%args%%);
-    OBJP_ERRCHECK(py);
-    Py_DECREF(pClass);
+    PyObject *pFunc = ObjP_findPythonClass(@"%%classname%%", nil);
+    %%funccall%%
+    py = pResult;
     PyGILState_Release(gilState);
     return self;
 }
@@ -76,15 +75,20 @@ TEMPLATE_INIT_METHOD = """
 TEMPLATE_METHOD = """
 - %%signature%%
 {
-    PyObject *pResult, *pMethodName;
     PyGILState_STATE gilState = PyGILState_Ensure();
-    pMethodName = PyUnicode_FromString("%%pyname%%");
-    OBJP_ERRCHECK(pMethodName);
-    pResult = PyObject_CallMethodObjArgs(py, pMethodName, %%args%%);
-    OBJP_ERRCHECK(pResult);
-    Py_DECREF(pMethodName);
+    PyObject *pFunc = PyObject_GetAttrString(py, "%%pyname%%");
+    OBJP_ERRCHECK(pFunc);
+    %%funccall%%
     %%returncode%%
 }
+"""
+
+TEMPLATE_FUNCCALL = """
+%%argscreate%%
+    PyObject *pResult = PyObject_CallFunctionObjArgs(pFunc, %%argslist%%);
+%%argsdecref%%
+    OBJP_ERRCHECK(pResult);
+    Py_DECREF(pFunc);
 """
 
 TEMPLATE_RETURN_VOID = """
@@ -140,7 +144,14 @@ def get_arg_c_code(argspecs):
 
 def get_objc_method_code(clsspec, methodspec):
     signature = get_objc_signature(methodspec)
-    tmpl_args = get_arg_c_code(methodspec.argspecs)
+    argspecs = methodspec.argspecs
+    fmt = '    PyObject *p%s = %s;'
+    tmpl_argscreate = '\n'.join([fmt % (arg.argname, arg.typespec.o2p_code % arg.argname) for arg in argspecs])
+    tmpl_argslist = ', '.join(['p' + arg.argname for arg in argspecs] + ['NULL'])
+    fmt = '    Py_DECREF(p%s);'
+    tmpl_argsdecref = '\n'.join([fmt % (arg.argname) for arg in argspecs])
+    tmpl_funccall = tmpl_replace(TEMPLATE_FUNCCALL, argscreate=tmpl_argscreate,
+        argslist=tmpl_argslist, argsdecref=tmpl_argsdecref)
     if methodspec.returntype is not None:
         ts = methodspec.returntype
         tmpl_pyconversion = ts.p2o_code % 'pResult'
@@ -149,10 +160,10 @@ def get_objc_method_code(clsspec, methodspec):
         returncode = TEMPLATE_RETURN_VOID
     if methodspec.pyname == '__init__':
         code = tmpl_replace(TEMPLATE_INIT_METHOD, signature=signature, classname=clsspec.clsname,
-            args=tmpl_args)
+            funccall=tmpl_funccall)
     else:
         code = tmpl_replace(TEMPLATE_METHOD, signature=signature, pyname=methodspec.pyname,
-            args=tmpl_args, returncode=returncode)
+            funccall=tmpl_funccall, returncode=returncode)
     sig = '- %s;' % signature
     return (code, sig)
 
