@@ -233,7 +233,7 @@ def generate_python_proxy_code_from_clsspec(clsspec, destpath, objcinterface=Non
         objc_create=tmpl_objc_create)
     tmpl_methods = []
     tmpl_methodsdef = []
-    for pyname, objcname, args, resulttype in clsspec.methodspecs:
+    for pyname, objcname, args, resulttype, is_inherited in clsspec.methodspecs:
         if pyname == '__init__':
             continue
         tmplval = {}
