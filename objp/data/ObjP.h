@@ -23,3 +23,4 @@ NSArray* ObjP_list_p2o(PyObject *pList);
 PyObject* ObjP_list_o2p(NSArray *list);
 NSDictionary* ObjP_dict_p2o(PyObject *pDict);
 PyObject* ObjP_dict_o2p(NSDictionary *dict);
+PyObject* ObjP_pyref_o2p(PyObject *pyref);

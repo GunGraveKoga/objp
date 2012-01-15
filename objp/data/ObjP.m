@@ -1,5 +1,9 @@
 #import "ObjP.h"
 
+/* Returns the python class `className` in `inModule`.
+
+   If inModule is nil, look for class in __main__.
+*/
 PyObject* ObjP_findPythonClass(NSString *className, NSString *inModule)
 {
     PyObject *pModule, *pClass;
@@ -20,6 +24,10 @@ PyObject* ObjP_findPythonClass(NSString *className, NSString *inModule)
     return pClass;
 }
 
+/* Return a class `className` instantiated with `ref` as a reference objc class.
+
+   `ref` will *not* be retained by the python class.
+*/
 PyObject* ObjP_classInstanceWithRef(NSString *className, NSString *inModule, id ref)
 {
     PyObject *pClass, *pRefCapsule, *pResult;
@@ -27,7 +35,7 @@ PyObject* ObjP_classInstanceWithRef(NSString *className, NSString *inModule, id 
     OBJP_LOCKGIL;
     pRefCapsule = PyCapsule_New(ref, NULL, NULL);
     OBJP_ERRCHECK(pRefCapsule);
-    pResult = PyObject_CallFunctionObjArgs(pClass, pRefCapsule, NULL);
+    pResult = PyObject_CallFunctionObjArgs(pClass, pRefCapsule, Py_False, NULL);
     OBJP_ERRCHECK(pResult);
     Py_DECREF(pClass);
     Py_DECREF(pRefCapsule);
@@ -231,4 +239,13 @@ PyObject* ObjP_dict_o2p(NSDictionary *dict)
     }
     OBJP_UNLOCKGIL;
     return pResult;
+}
+
+/* We can use pyref as is, but in all other o2p code, we expect to have to decref the result,
+   so in pyrefs case, we have to incref our pyref before returning it.
+*/
+PyObject* ObjP_pyref_o2p(PyObject *pyref)
+{
+    Py_INCREF(pyref);
+    return pyref;
 }
