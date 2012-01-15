@@ -49,6 +49,7 @@ TEMPLATE_CLASS = """
 typedef struct {
     PyObject_HEAD
     %%typedecl%%objc_ref;
+    unsigned char is_retained;
 } %%clsname%%_Struct;
 
 static PyTypeObject %%clsname%%_Type; /* Forward declaration */
@@ -58,7 +59,9 @@ static PyTypeObject %%clsname%%_Type; /* Forward declaration */
 static void
 %%clsname%%_dealloc(%%clsname%%_Struct *self)
 {
-    [self->objc_ref release];
+    if (self->is_retained) {
+        [self->objc_ref release];
+    }
     Py_TYPE(self)->tp_free((PyObject *)self);
 }
 
@@ -146,16 +149,21 @@ static int
 %%clsname%%_init(%%clsname%%_Struct *self, PyObject *args, PyObject *kwds)
 {
     PyObject *pRefCapsule = NULL;
-    if (!PyArg_ParseTuple(args, "|O", &pRefCapsule)) {
+    unsigned char should_retain = 1;
+    if (!PyArg_ParseTuple(args, "|Ob", &pRefCapsule, &should_retain)) {
         return -1;
     }
     
     if (pRefCapsule == NULL) {
         self->objc_ref = %%objc_create%%
+        self->is_retained = 1;
     }
     else {
         self->objc_ref = PyCapsule_GetPointer(pRefCapsule, NULL);
-        [self->objc_ref retain];
+        self->is_retained = should_retain;
+        if (should_retain) {
+            [self->objc_ref retain];
+        }
     }
     
     return 0;
