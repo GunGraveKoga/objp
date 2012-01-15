@@ -9,6 +9,41 @@ TEMPLATE_UNIT = """
 #import "structmember.h"
 #import "ObjP.h"
 
+%%classes%%
+
+static PyMethodDef module_methods[] = {
+    {NULL}  /* Sentinel */
+};
+
+static struct PyModuleDef %%modulename%%Def = {
+    PyModuleDef_HEAD_INIT,
+    "%%modulename%%",
+    NULL,
+    -1,
+    module_methods,
+    NULL,
+    NULL,
+    NULL,
+    NULL
+};
+
+PyObject *
+PyInit_%%modulename%%(void)
+{
+    PyObject *m;
+    m = PyModule_Create(&%%modulename%%Def);
+    if (m == NULL) {
+        return NULL;
+    }
+    
+    %%clsaddtomod%%
+    
+    return m;
+}
+
+"""
+
+TEMPLATE_CLASS = """
 %%objcinterface%%
 
 typedef struct {
@@ -83,47 +118,25 @@ static PyTypeObject %%clsname%%_Type = {
     0, /* tp_subclasses */
     0  /* tp_weaklist */
 };
+"""
 
-static PyMethodDef module_methods[] = {
-    {NULL}  /* Sentinel */
-};
-
-static struct PyModuleDef %%modulename%%Def = {
-    PyModuleDef_HEAD_INIT,
-    "%%modulename%%",
-    NULL,
-    -1,
-    module_methods,
-    NULL,
-    NULL,
-    NULL,
-    NULL
-};
-
-PyObject *
-PyInit_%%modulename%%(void)
-{
-    PyObject *m;
-    
+TEMPLATE_CLASS_ADD_TO_MOD = """
     %%clsname%%_Type.tp_new = PyType_GenericNew;
     if (PyType_Ready(&%%clsname%%_Type) < 0) {
         return NULL;
     }
-    
-    m = PyModule_Create(&%%modulename%%Def);
-    if (m == NULL) {
-        return NULL;
-    }
-    
     Py_INCREF(&%%clsname%%_Type);
     PyModule_AddObject(m, "%%clsname%%", (PyObject *)&%%clsname%%_Type);
-    return m;
-}
-
 """
 
 TEMPLATE_TARGET_PROTOCOL = """
 @protocol %%clsname%% <NSObject>
+%%methods%%
+@end
+"""
+
+TEMPLATE_TARGET_INTERFACE = """
+@interface %%clsname%%: NSObject {}
 %%methods%%
 @end
 """
@@ -216,14 +229,14 @@ def parse_objc_header(header):
         method_specs.append(MethodSpec(pyname, name, args, resulttype, False))
     return ClassSpec(clsname, '', method_specs, is_protocol, [])
 
-def generate_target_protocol(clsspec):
+def generate_objc_header(clsspec):
     clsname = clsspec.clsname
     signatures = ['- %s;' % get_objc_signature(methodspec) for methodspec in clsspec.methodspecs]
-    return tmpl_replace(TEMPLATE_TARGET_PROTOCOL, clsname=clsname, methods='\n'.join(signatures))
+    template = TEMPLATE_TARGET_PROTOCOL if clsspec.is_protocol else TEMPLATE_TARGET_INTERFACE
+    return tmpl_replace(template, clsname=clsname, methods='\n'.join(signatures))
 
-def generate_python_proxy_code_from_clsspec(clsspec, destpath, objcinterface=None):
-    if objcinterface is None:
-        objcinterface = generate_target_protocol(clsspec)
+def generate_class_code(clsspec):
+    objcinterface = generate_objc_header(clsspec)
     clsname = clsspec.clsname
     if clsspec.is_protocol:
         tmpl_objc_create = "NULL; // Never supposed to happen"
@@ -267,20 +280,38 @@ def generate_python_proxy_code_from_clsspec(clsspec, destpath, objcinterface=Non
         tmpl_methodsdef.append(tmpl_replace(TEMPLATE_METHODDEF, clsname=clsname, **tmplval))
     tmpl_methods = ''.join(tmpl_methods)
     tmpl_methodsdef = ''.join(tmpl_methodsdef)
-    modulename = op.splitext(op.basename(destpath))[0]
     typedecl = "id <%s>" % clsname if clsspec.is_protocol else "%s *" % clsname
-    result = tmpl_replace(TEMPLATE_UNIT, clsname=clsname, modulename=modulename,
-        typedecl=typedecl, objcinterface=objcinterface, initfunc=tmpl_initfunc, methods=tmpl_methods,
+    return tmpl_replace(TEMPLATE_CLASS, clsname=clsname, typedecl=typedecl,
+        objcinterface=objcinterface, initfunc=tmpl_initfunc, methods=tmpl_methods,
         methodsdef=tmpl_methodsdef)
+
+def generate_add_to_module_code(clsspec):
+    return tmpl_replace(TEMPLATE_CLASS_ADD_TO_MOD, clsname=clsspec.clsname)
+
+def generate_python_proxy_code_from_clsspec(clsspecs, destpath):
+    if not isinstance(clsspecs, (list, tuple)):
+        clsspecs = [clsspecs]
+    clscode = []
+    clsaddtomodcode = []
+    for clsspec in clsspecs:
+        clscode.append(generate_class_code(clsspec))
+        clsaddtomodcode.append(generate_add_to_module_code(clsspec))
+    modulename = op.splitext(op.basename(destpath))[0]
+    result = tmpl_replace(TEMPLATE_UNIT, classes='\n'.join(clscode), modulename=modulename,
+        clsaddtomod='\n'.join(clsaddtomodcode))
     copy_objp_unit(op.dirname(destpath))
     with open(destpath, 'wt') as fp:
         fp.write(result)
 
-def generate_python_proxy_code(header_path, destpath):
+def generate_python_proxy_code(header_paths, destpath):
     # The name of the file in destpath will determine the name of the module. For example,
     # "foo/bar.m" will result in a module name "bar".
-    with open(header_path, 'rt') as fp:
-        header = fp.read()
-    clsspec = parse_objc_header(header)
-    generate_python_proxy_code_from_clsspec(clsspec, destpath, header)
+    if not isinstance(header_paths, (list, tuple)):
+        header_paths = [header_paths]
+    clsspecs = []
+    for header_path in header_paths:
+        with open(header_path, 'rt') as fp:
+            header = fp.read()
+        clsspecs.append(parse_objc_header(header))
+    generate_python_proxy_code_from_clsspec(clsspecs, destpath)
     
