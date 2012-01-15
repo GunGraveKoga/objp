@@ -1,11 +1,16 @@
 #import <Cocoa/Cocoa.h>
 #import <Python.h>
 
-#define OBJP_ERRCHECK(x) if (x == NULL) {ObjP_raisePyExceptionInCocoa();}
+#define OBJP_LOCKGIL PyGILState_STATE gilState = PyGILState_Ensure()
+#define OBJP_UNLOCKGIL PyGILState_Release(gilState)
+
+// This macro below can only be used inside OBJP_LOCKGIL and OBJP_UNLOCKGIL because when there's
+// an exception, the GIL will be released before throwing an exception.
+#define OBJP_ERRCHECK(x) if (x == NULL) {ObjP_raisePyExceptionInCocoa(gilState);}
 
 PyObject* ObjP_findPythonClass(NSString *name, NSString *inModule);
 PyObject* ObjP_classInstanceWithRef(NSString *className, NSString *inModule, id ref);
-void ObjP_raisePyExceptionInCocoa(void);
+void ObjP_raisePyExceptionInCocoa(PyGILState_STATE gilState);
 NSString* ObjP_str_p2o(PyObject *pStr);
 PyObject* ObjP_str_o2p(NSString *str);
 NSInteger ObjP_int_p2o(PyObject *pInt);

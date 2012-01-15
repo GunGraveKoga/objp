@@ -35,9 +35,9 @@ TEMPLATE_UNIT = """
 @implementation %%classname%%
 - (void)dealloc
 {
-    PyGILState_STATE gilState = PyGILState_Ensure();
+    OBJP_LOCKGIL;
     Py_DECREF(py);
-    PyGILState_Release(gilState);
+    OBJP_UNLOCKGIL;
     [super dealloc];
 }
 
@@ -63,11 +63,11 @@ TEMPLATE_INIT_METHOD = """
 - %%signature%%
 {
     self = [super init];
-    PyGILState_STATE gilState = PyGILState_Ensure();
+    OBJP_LOCKGIL;
     PyObject *pFunc = ObjP_findPythonClass(@"%%classname%%", nil);
     %%funccall%%
     py = pResult;
-    PyGILState_Release(gilState);
+    OBJP_UNLOCKGIL;
     return self;
 }
 """
@@ -75,7 +75,7 @@ TEMPLATE_INIT_METHOD = """
 TEMPLATE_METHOD = """
 - %%signature%%
 {
-    PyGILState_STATE gilState = PyGILState_Ensure();
+    OBJP_LOCKGIL;
     PyObject *pFunc = PyObject_GetAttrString(py, "%%pyname%%");
     OBJP_ERRCHECK(pFunc);
     %%funccall%%
@@ -93,13 +93,13 @@ TEMPLATE_FUNCCALL = """
 
 TEMPLATE_RETURN_VOID = """
     Py_DECREF(pResult);
-    PyGILState_Release(gilState);
+    OBJP_UNLOCKGIL;
 """
 
 TEMPLATE_RETURN = """
     %%type%% result = %%pyconversion%%;
     Py_DECREF(pResult);
-    PyGILState_Release(gilState);
+    OBJP_UNLOCKGIL;
     return result;
 """
 

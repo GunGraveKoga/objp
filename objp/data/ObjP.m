@@ -3,6 +3,7 @@
 PyObject* ObjP_findPythonClass(NSString *className, NSString *inModule)
 {
     PyObject *pModule, *pClass;
+    OBJP_LOCKGIL;
     if (inModule == nil) {
         pModule = PyImport_AddModule("__main__");
     }
@@ -15,6 +16,7 @@ PyObject* ObjP_findPythonClass(NSString *className, NSString *inModule)
     if (inModule != nil) {
         Py_DECREF(pModule);
     }
+    OBJP_UNLOCKGIL;
     return pClass;
 }
 
@@ -22,16 +24,18 @@ PyObject* ObjP_classInstanceWithRef(NSString *className, NSString *inModule, id 
 {
     PyObject *pClass, *pRefCapsule, *pResult;
     pClass = ObjP_findPythonClass(className, inModule);
+    OBJP_LOCKGIL;
     pRefCapsule = PyCapsule_New(ref, NULL, NULL);
     OBJP_ERRCHECK(pRefCapsule);
     pResult = PyObject_CallFunctionObjArgs(pClass, pRefCapsule, NULL);
     OBJP_ERRCHECK(pResult);
     Py_DECREF(pClass);
     Py_DECREF(pRefCapsule);
+    OBJP_UNLOCKGIL;
     return pResult;
 }
 
-void ObjP_raisePyExceptionInCocoa(void)
+void ObjP_raisePyExceptionInCocoa(PyGILState_STATE gilState)
 {
     PyObject *pExcType, *pExcValue, *pExcTraceback;
     PyErr_Fetch(&pExcType, &pExcValue, &pExcTraceback);
@@ -53,41 +57,54 @@ void ObjP_raisePyExceptionInCocoa(void)
     PyErr_Restore(pExcType, pExcValue, pExcTraceback);
     // This will print the exception and, more importantly, call sys.excepthook.
     PyErr_Print();
+    OBJP_UNLOCKGIL;
     @throw exc;
 }
 
 NSString* ObjP_str_p2o(PyObject *pStr)
 {
+    OBJP_LOCKGIL;
     PyObject *pBytes = PyUnicode_AsUTF8String(pStr);
     OBJP_ERRCHECK(pBytes);
     char *utf8Bytes = PyBytes_AS_STRING(pBytes);
     NSString *result = [NSString stringWithUTF8String:utf8Bytes];
     Py_DECREF(pBytes);
+    OBJP_UNLOCKGIL;
     return result;
 }
 
 PyObject* ObjP_str_o2p(NSString *str)
 {
+    OBJP_LOCKGIL;
     PyObject *pResult = PyUnicode_FromString([str UTF8String]);
     OBJP_ERRCHECK(pResult);
+    OBJP_UNLOCKGIL;
     return pResult;
 }
 
 NSInteger ObjP_int_p2o(PyObject *pInt)
 {
-    return PyLong_AsLong(pInt);
+    OBJP_LOCKGIL;
+    NSInteger result = PyLong_AsLong(pInt);
+    OBJP_UNLOCKGIL;
+    return result;
 }
 
 PyObject* ObjP_int_o2p(NSInteger i)
 {
+    OBJP_LOCKGIL;
     PyObject *pResult = PyLong_FromLong(i);
     OBJP_ERRCHECK(pResult);
+    OBJP_UNLOCKGIL;
     return pResult;
 }
 
 BOOL ObjP_bool_p2o(PyObject *pBool)
 {
-    return PyObject_IsTrue(pBool);
+    OBJP_LOCKGIL;
+    BOOL result = PyObject_IsTrue(pBool);
+    OBJP_UNLOCKGIL;
+    return result;
 }
 
 PyObject* ObjP_bool_o2p(BOOL b)
@@ -102,28 +119,32 @@ PyObject* ObjP_bool_o2p(BOOL b)
 
 NSObject* ObjP_obj_p2o(PyObject *pObj)
 {
+    NSObject *result;
+    OBJP_LOCKGIL;
     if (pObj == Py_None) {
-        return nil;
+        result = nil;
     }
     else if (PyUnicode_Check(pObj)) {
-        return ObjP_str_p2o(pObj);
+        result = ObjP_str_p2o(pObj);
     }
     else if (PyLong_Check(pObj)) {
-        return [NSNumber numberWithInt:ObjP_int_p2o(pObj)];
+        result = [NSNumber numberWithInt:ObjP_int_p2o(pObj)];
     }
     else if (PyBool_Check(pObj)) {
-        return [NSNumber numberWithBool:ObjP_bool_p2o(pObj)];
+        result = [NSNumber numberWithBool:ObjP_bool_p2o(pObj)];
     }
     else if (PySequence_Check(pObj)) {
-        return ObjP_list_p2o(pObj);
+        result = ObjP_list_p2o(pObj);
     }
     else if (PyDict_Check(pObj)) {
-        return ObjP_dict_p2o(pObj);
+        result = ObjP_dict_p2o(pObj);
     }
     else {
         NSLog(@"Warning, ObjP_obj_p2o failed.");
-        return nil;
+        result = nil;
     }
+    OBJP_UNLOCKGIL;
+    return result;
 }
 
 PyObject* ObjP_obj_o2p(NSObject *obj)
@@ -150,6 +171,7 @@ PyObject* ObjP_obj_o2p(NSObject *obj)
 
 NSArray* ObjP_list_p2o(PyObject *pList)
 {
+    OBJP_LOCKGIL;
     PyObject *iterator = PyObject_GetIter(pList);
     OBJP_ERRCHECK(iterator);
     PyObject *item;
@@ -160,11 +182,13 @@ NSArray* ObjP_list_p2o(PyObject *pList)
         Py_DECREF(item);
     }
     Py_DECREF(iterator);
+    OBJP_UNLOCKGIL;
     return result;
 }
 
 PyObject* ObjP_list_o2p(NSArray *list)
 {
+    OBJP_LOCKGIL;
     PyObject *pResult = PyList_New([list count]);
     OBJP_ERRCHECK(pResult);
     NSInteger i;
@@ -173,6 +197,7 @@ PyObject* ObjP_list_o2p(NSArray *list)
         PyObject *pItem = ObjP_obj_o2p(obj);
         PyList_SET_ITEM(pResult, i, pItem);
     }
+    OBJP_UNLOCKGIL;
     return pResult;
 }
 
@@ -180,6 +205,7 @@ NSDictionary* ObjP_dict_p2o(PyObject *pDict)
 {
     PyObject *pKey, *pValue;
     Py_ssize_t pos = 0;
+    OBJP_LOCKGIL;
     NSMutableDictionary *result = [NSMutableDictionary dictionary];
     while (PyDict_Next(pDict, &pos, &pKey, &pValue)) {
         OBJP_ERRCHECK(pKey);
@@ -188,11 +214,13 @@ NSDictionary* ObjP_dict_p2o(PyObject *pDict)
         NSObject *value = ObjP_obj_p2o(pValue);
         [result setObject:value forKey:key];
     }
+    OBJP_UNLOCKGIL;
     return result;
 }
 
 PyObject* ObjP_dict_o2p(NSDictionary *dict)
 {
+    OBJP_LOCKGIL;
     PyObject *pResult = PyDict_New();
     OBJP_ERRCHECK(pResult);
     for (NSString *key in dict) {
@@ -201,5 +229,6 @@ PyObject* ObjP_dict_o2p(NSDictionary *dict)
         PyDict_SetItemString(pResult, [key UTF8String], pValue);
         Py_DECREF(pValue);
     }
+    OBJP_UNLOCKGIL;
     return pResult;
 }
