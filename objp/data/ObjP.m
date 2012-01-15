@@ -33,15 +33,13 @@ PyObject* ObjP_classInstanceWithRef(NSString *className, NSString *inModule, id 
 
 void ObjP_raisePyExceptionInCocoa(void)
 {
-    PyObject* pExcType;
-    PyObject* pExcValue;
-    PyObject* pExcTraceback;
+    PyObject *pExcType, *pExcValue, *pExcTraceback;
     PyErr_Fetch(&pExcType, &pExcValue, &pExcTraceback);
     if (pExcType == NULL) {
+        NSLog(@"ObjP_raisePyExceptionInCocoa() called with no exception set.");
         return;
     }
     PyErr_NormalizeException(&pExcType, &pExcValue, &pExcTraceback);
-
     PyObject *pErrType = PyObject_Str(pExcType);
     PyObject *pErrMsg = PyObject_Str(pExcValue);
     NSString *errType = ObjP_str_p2o(pErrType);
@@ -50,12 +48,11 @@ void ObjP_raisePyExceptionInCocoa(void)
     NSException *exc = [NSException exceptionWithName:@"PythonException" reason:reason userInfo:nil];
     Py_DECREF(pErrType);
     Py_DECREF(pErrMsg);
-    // PyErr_Fetch cleared the exception so we have to restore it if we want to print it
+    // PyErr_Fetch cleared the exception so we have to restore it if we want to print it. This call
+    // Also steals reference to its arguments.
     PyErr_Restore(pExcType, pExcValue, pExcTraceback);
-    PyErr_Print(); // Cleared again
-    Py_DECREF(pExcType);
-    Py_XDECREF(pExcValue);
-    Py_XDECREF(pExcTraceback);
+    // This will print the exception and, more importantly, call sys.excepthook.
+    PyErr_Print();
     @throw exc;
 }
 
