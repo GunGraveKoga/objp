@@ -186,7 +186,11 @@ NSArray* ObjP_list_p2o(PyObject *pList)
     NSMutableArray *result = [NSMutableArray array];
     while ( (item = PyIter_Next(iterator)) ) {
         OBJP_ERRCHECK(item);
-        [result addObject:ObjP_obj_p2o(item)];
+        NSObject *value = ObjP_obj_p2o(item);
+        if (value == nil) {
+            value = [NSNull null];
+        }
+        [result addObject:value];
         Py_DECREF(item);
     }
     Py_DECREF(iterator);
@@ -220,6 +224,9 @@ NSDictionary* ObjP_dict_p2o(PyObject *pDict)
         OBJP_ERRCHECK(pValue);
         NSString *key = ObjP_str_p2o(pKey);
         NSObject *value = ObjP_obj_p2o(pValue);
+        if (value == nil) {
+            value = [NSNull null];
+        }
         [result setObject:value forKey:key];
     }
     OBJP_UNLOCKGIL;
