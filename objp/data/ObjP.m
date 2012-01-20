@@ -107,6 +107,23 @@ PyObject* ObjP_int_o2p(NSInteger i)
     return pResult;
 }
 
+CGFloat ObjP_float_p2o(PyObject *pFloat)
+{
+    OBJP_LOCKGIL;
+    CGFloat result = PyFloat_AsDouble(pFloat);
+    OBJP_UNLOCKGIL;
+    return result;
+}
+
+PyObject* ObjP_float_o2p(CGFloat f)
+{
+    OBJP_LOCKGIL;
+    PyObject *pResult = PyFloat_FromDouble(f);
+    OBJP_ERRCHECK(pResult);
+    OBJP_UNLOCKGIL;
+    return pResult;
+}
+
 BOOL ObjP_bool_p2o(PyObject *pBool)
 {
     OBJP_LOCKGIL;
@@ -138,6 +155,9 @@ NSObject* ObjP_obj_p2o(PyObject *pObj)
     else if (PyLong_Check(pObj)) {
         result = [NSNumber numberWithInt:ObjP_int_p2o(pObj)];
     }
+    else if (PyFloat_Check(pObj)) {
+        result = [NSNumber numberWithDouble:ObjP_float_p2o(pObj)];
+    }
     else if (PyBool_Check(pObj)) {
         result = [NSNumber numberWithBool:ObjP_bool_p2o(pObj)];
     }
@@ -164,7 +184,16 @@ PyObject* ObjP_obj_o2p(NSObject *obj)
         return ObjP_str_o2p((NSString *)obj);
     }
     else if ([obj isKindOfClass:[NSNumber class]]) {
-        return ObjP_int_o2p([(NSNumber *)obj intValue]);
+        const char *objc_type = [(NSNumber *)obj objCType];
+        if (objc_type[0] == 'c') {
+            return ObjP_bool_o2p([(NSNumber *)obj boolValue]);
+        }
+        else if ((objc_type[0] == 'f') || (objc_type[0] == 'd')) {
+            return ObjP_float_o2p([(NSNumber *)obj doubleValue]);
+        }
+        else {
+            return ObjP_int_o2p([(NSNumber *)obj intValue]);
+        }
     }
     else if ([obj isKindOfClass:[NSArray class]]) {
         return ObjP_list_o2p((NSArray *)obj);

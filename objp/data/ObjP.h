@@ -15,6 +15,8 @@ NSString* ObjP_str_p2o(PyObject *pStr);
 PyObject* ObjP_str_o2p(NSString *str);
 NSInteger ObjP_int_p2o(PyObject *pInt);
 PyObject* ObjP_int_o2p(NSInteger i);
+CGFloat ObjP_float_p2o(PyObject *pFloat);
+PyObject* ObjP_float_o2p(CGFloat f);
 BOOL ObjP_bool_p2o(PyObject *pBool);
 PyObject* ObjP_bool_o2p(BOOL b);
 NSObject* ObjP_obj_p2o(PyObject *pObj);

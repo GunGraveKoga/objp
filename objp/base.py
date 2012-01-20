@@ -13,6 +13,7 @@ ClassSpec = namedtuple('ClassSpec', 'clsname superclass methodspecs is_protocol 
 TYPE_SPECS = [
     TypeSpec(str, 'NSString *', 'ObjP_str_o2p(%s)', 'ObjP_str_p2o(%s)'),
     TypeSpec(int, 'NSInteger', 'ObjP_int_o2p(%s)', 'ObjP_int_p2o(%s)'),
+    TypeSpec(float, 'CGFloat', 'ObjP_float_o2p(%s)', 'ObjP_float_p2o(%s)'),
     TypeSpec(bool, 'BOOL', 'ObjP_bool_o2p(%s)', 'ObjP_bool_p2o(%s)'),
     TypeSpec(object, 'id', 'ObjP_obj_o2p(%s)', 'ObjP_obj_p2o(%s)'),
     TypeSpec(list, 'NSArray *', 'ObjP_list_o2p(%s)', 'ObjP_list_p2o(%s)'),
