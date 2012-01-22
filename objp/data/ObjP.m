@@ -71,6 +71,9 @@ void ObjP_raisePyExceptionInCocoa(PyGILState_STATE gilState)
 
 NSString* ObjP_str_p2o(PyObject *pStr)
 {
+    if (pStr == Py_None) {
+        return nil;
+    }
     OBJP_LOCKGIL;
     PyObject *pBytes = PyUnicode_AsUTF8String(pStr);
     OBJP_ERRCHECK(pBytes);
@@ -208,6 +211,9 @@ PyObject* ObjP_obj_o2p(NSObject *obj)
 
 NSArray* ObjP_list_p2o(PyObject *pList)
 {
+    if (pList == Py_None) {
+        return nil;
+    }
     OBJP_LOCKGIL;
     PyObject *iterator = PyObject_GetIter(pList);
     OBJP_ERRCHECK(iterator);
@@ -244,6 +250,9 @@ PyObject* ObjP_list_o2p(NSArray *list)
 
 NSDictionary* ObjP_dict_p2o(PyObject *pDict)
 {
+    if (pDict == Py_None) {
+        return nil;
+    }
     PyObject *pKey, *pValue;
     Py_ssize_t pos = 0;
     OBJP_LOCKGIL;
