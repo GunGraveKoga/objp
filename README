@@ -78,16 +78,17 @@ Argument Types
 Only a few argument types are supported by ObjP, the goal being to keep the project simple.
 
 * ``int/NSInteger``
+* ``float/CGFloat``
 * ``str/NSString*``
 * ``bool/BOOL``
 * ``list/NSArray*``
 * ``dict/NSDictionary*``
 
 ObjP also supports ``object`` which dynamically converts the argument depending on its type and
-returns an ``NSObject`` subclass (which means that ``int`` and ``bool` convert to ``NSNumber``
-instead of converting to ``NSInteger`` and ``BOOL``). This type of conversion is used to convert
-the contents of ``list`` and ``dict`` (it's impossible to have an NSArray directly containing
-``BOOL``).
+returns an ``NSObject`` subclass (which means that ``int``, ``float`` and ``bool` convert to
+``NSNumber`` instead of converting to ``NSInteger`` and ``BOOL``). This type of conversion is used
+to convert the contents of ``list`` and ``dict`` (it's impossible to have an NSArray directly
+containing ``BOOL``).
 
 Another special argument type is ``pyref`` (which you must import from ``objp.util`` in your code)
 which simply passes the ``PyObject*`` instance around without converting it.
