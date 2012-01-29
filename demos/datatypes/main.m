@@ -19,6 +19,16 @@ int main(int argc, char *argv[])
         [NSNumber numberWithFloat:42.42], [NSNumber numberWithBool:YES], [NSArray array],
         [NSDictionary dictionary], nil]]);
     NSLog(@"%@", [foo dict:[NSDictionary dictionaryWithObject:@"foo" forKey:@"bar"]]);
+    NSPoint p = NSMakePoint(1, 2);
+    NSPoint rp = [foo point:p];
+    NSLog(@"%f %f", rp.x, rp.y);
+    NSSize s = NSMakeSize(3, 4);
+    NSSize rs = [foo size:s];
+    NSLog(@"%f %f", rs.width, rs.height);
+    NSRect r;
+    r.origin = p;
+    r.size = s;
+    NSLog(@"%@", NSStringFromRect([foo rect:r]));
     Py_Finalize();
     [pool release];
     return 0;   

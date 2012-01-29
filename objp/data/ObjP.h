@@ -25,4 +25,11 @@ NSArray* ObjP_list_p2o(PyObject *pList);
 PyObject* ObjP_list_o2p(NSArray *list);
 NSDictionary* ObjP_dict_p2o(PyObject *pDict);
 PyObject* ObjP_dict_o2p(NSDictionary *dict);
+NSPoint ObjP_nspoint_p2o(PyObject *pPoint);
+PyObject* ObjP_nspoint_o2p(NSPoint p);
+NSSize ObjP_nssize_p2o(PyObject *pSize);
+PyObject* ObjP_nssize_o2p(NSSize s);
+NSRect ObjP_nsrect_p2o(PyObject *pRect);
+PyObject* ObjP_nsrect_o2p(NSRect r);
 PyObject* ObjP_pyref_o2p(PyObject *pyref);
+

@@ -286,6 +286,81 @@ PyObject* ObjP_dict_o2p(NSDictionary *dict)
     return pResult;
 }
 
+NSPoint ObjP_nspoint_p2o(PyObject *pPoint)
+{
+    OBJP_LOCKGIL;
+    NSPoint result;
+    PyObject *iterator = PyObject_GetIter(pPoint);
+    OBJP_ERRCHECK(iterator);
+    PyObject *item = PyIter_Next(iterator);
+    OBJP_ERRCHECK(item);
+    result.x = ObjP_float_p2o(item);
+    item = PyIter_Next(iterator);
+    OBJP_ERRCHECK(item);
+    result.y = ObjP_float_p2o(item);
+    OBJP_UNLOCKGIL;
+    return result;
+}
+
+PyObject* ObjP_nspoint_o2p(NSPoint p)
+{
+    OBJP_LOCKGIL;
+    PyObject *pResult = PyTuple_New(2);
+    OBJP_ERRCHECK(pResult);
+    PyTuple_SET_ITEM(pResult, 0, ObjP_float_o2p(p.x));
+    PyTuple_SET_ITEM(pResult, 1, ObjP_float_o2p(p.y));
+    OBJP_UNLOCKGIL;
+    return pResult;
+}
+
+// NSSize and NSPoint have the same structure, we can same some code duplication here.
+NSSize ObjP_nssize_p2o(PyObject *pSize)
+{
+    NSPoint p = ObjP_nspoint_p2o(pSize);
+    return NSMakeSize(p.x, p.y);
+}
+
+PyObject* ObjP_nssize_o2p(NSSize s)
+{
+    NSPoint p = NSMakePoint(s.width, s.height);
+    return ObjP_nspoint_o2p(p);
+}
+
+NSRect ObjP_nsrect_p2o(PyObject *pRect)
+{
+    OBJP_LOCKGIL;
+    NSRect result;
+    PyObject *iterator = PyObject_GetIter(pRect);
+    OBJP_ERRCHECK(iterator);
+    PyObject *item = PyIter_Next(iterator);
+    OBJP_ERRCHECK(item);
+    result.origin.x = ObjP_float_p2o(item);
+    item = PyIter_Next(iterator);
+    OBJP_ERRCHECK(item);
+    result.origin.y = ObjP_float_p2o(item);
+    item = PyIter_Next(iterator);
+    OBJP_ERRCHECK(item);
+    result.size.width = ObjP_float_p2o(item);
+    item = PyIter_Next(iterator);
+    OBJP_ERRCHECK(item);
+    result.size.height = ObjP_float_p2o(item);
+    OBJP_UNLOCKGIL;
+    return result;
+}
+
+PyObject* ObjP_nsrect_o2p(NSRect r)
+{
+    OBJP_LOCKGIL;
+    PyObject *pResult = PyTuple_New(4);
+    OBJP_ERRCHECK(pResult);
+    PyTuple_SET_ITEM(pResult, 0, ObjP_float_o2p(r.origin.x));
+    PyTuple_SET_ITEM(pResult, 1, ObjP_float_o2p(r.origin.y));
+    PyTuple_SET_ITEM(pResult, 2, ObjP_float_o2p(r.size.width));
+    PyTuple_SET_ITEM(pResult, 3, ObjP_float_o2p(r.size.height));
+    OBJP_UNLOCKGIL;
+    return pResult;
+}
+
 /* We can use pyref as is, but in all other o2p code, we expect to have to decref the result,
    so in pyrefs case, we have to incref our pyref before returning it.
 */

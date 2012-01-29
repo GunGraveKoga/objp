@@ -83,6 +83,9 @@ Only a few argument types are supported by ObjP, the goal being to keep the proj
 * ``bool/BOOL``
 * ``list/NSArray*``
 * ``dict/NSDictionary*``
+* ``nspoint/NSPoint``
+* ``nssize/NSSize``
+* ``nsrect/NSRect``
 
 ObjP also supports ``object`` which dynamically converts the argument depending on its type and
 returns an ``NSObject`` subclass (which means that ``int``, ``float`` and ``bool` convert to
@@ -93,10 +96,15 @@ containing ``BOOL``).
 Another special argument type is ``pyref`` (which you must import from ``objp.util`` in your code)
 which simply passes the ``PyObject*`` instance around without converting it.
 
+The structure arguments allow you to transform tuples to native objc structures and vice-versa.
+Python has no "native" structure for points, sizes and rects, so that's why we convert to/from
+tuples (``(x, y)``, ``(w, h)`` and ``(x, y, w, h)``). Like ``pyref``, the ``ns*`` signature
+arguments have to be imported from ``objp.util``.
+
 Utilities
 ---------
 
-``objp.util`` contains the ``pyref`` argument type, but it also contains two useful method
-decorators: ``dontwrap`` and ``objcname``. A method decorated with ``dontwrap`` will be ignored by
-the code generator, and a method decorated with ``@objcname('some:selector:')`` will use this name
-for generating objc code instead of the automatically generated name.
+``objp.util`` contains the ``pyref`` and ``ns*`` argument types, but it also contains two useful
+method decorators: ``dontwrap`` and ``objcname``. A method decorated with ``dontwrap`` will be
+ignored by the code generator, and a method decorated with ``@objcname('some:selector:')`` will use
+this name for generating objc code instead of the automatically generated name.
