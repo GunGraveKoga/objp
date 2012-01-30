@@ -305,10 +305,12 @@ NSPoint ObjP_nspoint_p2o(PyObject *pPoint)
 PyObject* ObjP_nspoint_o2p(NSPoint p)
 {
     OBJP_LOCKGIL;
-    PyObject *pResult = PyTuple_New(2);
+    PyObject *pX = ObjP_float_o2p(p.x);
+    PyObject *pY = ObjP_float_o2p(p.y);
+    PyObject *pResult = PyTuple_Pack(2, pX, pY);
     OBJP_ERRCHECK(pResult);
-    PyTuple_SET_ITEM(pResult, 0, ObjP_float_o2p(p.x));
-    PyTuple_SET_ITEM(pResult, 1, ObjP_float_o2p(p.y));
+    Py_DECREF(pX);
+    Py_DECREF(pY);
     OBJP_UNLOCKGIL;
     return pResult;
 }
@@ -351,12 +353,16 @@ NSRect ObjP_nsrect_p2o(PyObject *pRect)
 PyObject* ObjP_nsrect_o2p(NSRect r)
 {
     OBJP_LOCKGIL;
-    PyObject *pResult = PyTuple_New(4);
+    PyObject *pX = ObjP_float_o2p(r.origin.x);
+    PyObject *pY = ObjP_float_o2p(r.origin.y);
+    PyObject *pW = ObjP_float_o2p(r.size.width);
+    PyObject *pH = ObjP_float_o2p(r.size.height);
+    PyObject *pResult = PyTuple_Pack(4, pX, pY, pW, pH);
     OBJP_ERRCHECK(pResult);
-    PyTuple_SET_ITEM(pResult, 0, ObjP_float_o2p(r.origin.x));
-    PyTuple_SET_ITEM(pResult, 1, ObjP_float_o2p(r.origin.y));
-    PyTuple_SET_ITEM(pResult, 2, ObjP_float_o2p(r.size.width));
-    PyTuple_SET_ITEM(pResult, 3, ObjP_float_o2p(r.size.height));
+    Py_DECREF(pX);
+    Py_DECREF(pY);
+    Py_DECREF(pW);
+    Py_DECREF(pH);
     OBJP_UNLOCKGIL;
     return pResult;
 }
