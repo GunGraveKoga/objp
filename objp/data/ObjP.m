@@ -87,8 +87,15 @@ NSString* ObjP_str_p2o(PyObject *pStr)
 PyObject* ObjP_str_o2p(NSString *str)
 {
     OBJP_LOCKGIL;
-    PyObject *pResult = PyUnicode_FromString([str UTF8String]);
-    OBJP_ERRCHECK(pResult);
+    PyObject *pResult;
+    if (str != nil) {
+        pResult = PyUnicode_FromString([str UTF8String]);
+        OBJP_ERRCHECK(pResult);
+    }
+    else {
+        pResult = Py_None;
+        Py_INCREF(pResult);
+    }
     OBJP_UNLOCKGIL;
     return pResult;
 }
