@@ -1,6 +1,12 @@
 Changes
 =======
 
+Version 1.2.0 -- 2012/02/01
+---------------------------
+
+* Added support for ``NSPoint``, ``NSSize`` and ``NSRect`` structures.
+* In ``ObjP_str_o2p()``, when the string is ``nil``, return ``Py_None`` instead of crashing.
+
 Version 1.1.0 -- 2012/01/23
 ---------------------------
 
