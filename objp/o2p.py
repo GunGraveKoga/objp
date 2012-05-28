@@ -11,7 +11,7 @@ TEMPLATE_HEADER = """
 
 @interface %%classname%%:NSObject %%protocols%%
 {
-    PyObject *py;
+    PyObject *_py;
 }
 - (PyObject *)pyRef;
 %%methods%%
@@ -36,14 +36,14 @@ TEMPLATE_UNIT = """
 - (void)dealloc
 {
     OBJP_LOCKGIL;
-    Py_DECREF(py);
+    Py_DECREF(_py);
     OBJP_UNLOCKGIL;
     [super dealloc];
 }
 
 - (PyObject *)pyRef
 {
-    return py;
+    return _py;
 }
 
 %%methods%%
@@ -66,7 +66,7 @@ TEMPLATE_INIT_METHOD = """
     OBJP_LOCKGIL;
     PyObject *pFunc = ObjP_findPythonClass(@"%%classname%%", nil);
     %%funccall%%
-    py = pResult;
+    _py = pResult;
     OBJP_UNLOCKGIL;
     return self;
 }
@@ -76,7 +76,7 @@ TEMPLATE_METHOD = """
 - %%signature%%
 {
     OBJP_LOCKGIL;
-    PyObject *pFunc = PyObject_GetAttrString(py, "%%pyname%%");
+    PyObject *pFunc = PyObject_GetAttrString(_py, "%%pyname%%");
     OBJP_ERRCHECK(pFunc);
     %%funccall%%
     %%returncode%%
