@@ -1,6 +1,12 @@
 Changes
 =======
 
+Version 1.2.1 -- 2012/05/28
+---------------------------
+
+* Renamed proxy's target member name from ``py`` to ``_py`` to avoid name clash with local variables
+  when an argument would be named ``y``.
+
 Version 1.2.0 -- 2012/02/01
 ---------------------------
 
