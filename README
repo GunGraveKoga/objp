@@ -88,10 +88,10 @@ Only a few argument types are supported by ObjP, the goal being to keep the proj
 * ``nsrect/NSRect``
 
 ObjP also supports ``object`` which dynamically converts the argument depending on its type and
-returns an ``NSObject`` subclass (which means that ``int``, ``float`` and ``bool` convert to
-``NSNumber`` instead of converting to ``NSInteger`` and ``BOOL``). This type of conversion is used
-to convert the contents of ``list`` and ``dict`` (it's impossible to have an NSArray directly
-containing ``BOOL``).
+returns an ``NSObject`` subclass (which means that ``int``, ``float`` and ``bool`` convert to
+``NSNumber`` instead of converting to ``NSInteger``, ``CGFloat`` and ``BOOL``). This type of
+conversion is used to convert the contents of ``list`` and ``dict`` (it's impossible to have an
+NSArray directly containing ``BOOL``).
 
 Another special argument type is ``pyref`` (which you must import from ``objp.util`` in your code)
 which simply passes the ``PyObject*`` instance around without converting it.
@@ -108,3 +108,33 @@ Utilities
 method decorators: ``dontwrap`` and ``objcname``. A method decorated with ``dontwrap`` will be
 ignored by the code generator, and a method decorated with ``@objcname('some:selector:')`` will use
 this name for generating objc code instead of the automatically generated name.
+
+Constant conversion
+-------------------
+
+When having code in two different languages, we sometimes have to share constants in between the
+two. To avoid having to manually maintain an Objective-C counterpart to your Python constants,
+``objp`` offers a small utility, ``objp.const.generate_objc_code(module, dest)``. This takes all
+elements in ``module``'s namespace and convert them to an Objective-C's constant unit at ``dest``.
+
+``int``, ``float`` and ``str`` types are going to be converted to ``#define <name> <str(value)>``
+(with ``@""`` around ``str`` values). You can also have enum classes in your python constant
+module. A class is considered an enum if it has integer members. For example::
+
+    class Foo:
+        Bar = 1
+        Baz = 2
+
+will be converted to::
+
+    typedef enum {
+        FooBar=1,
+        FooBaz=2
+    } Foo;
+
+Because this function will choke on any value that it can't convert, it is recommended that you use
+it on modules specifically written for that, for example a ``cocoa_const.py`` that imports from
+your real const unit. Since constants in Objective-C often have prefixes, you can also add them in
+that unit. It could look like that::
+
+    from real_const import FOO as XZFOO, BAR as XZBAR, MyEnum as XZMyEnum
