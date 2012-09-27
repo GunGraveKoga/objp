@@ -11,7 +11,7 @@ LONG_DESC = open('README', 'rt').read() + '\n\n' + open('CHANGES', 'rt').read()
 
 setup(
     name='objp',
-    version='1.2.1',
+    version='1.3.0',
     author='Hardcoded Software',
     author_email='hsoft@hardcoded.net',
     packages=['objp'],
