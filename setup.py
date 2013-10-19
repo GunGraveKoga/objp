@@ -7,7 +7,7 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 3.2',
 ]
 
-LONG_DESC = open('README', 'rt').read() + '\n\n' + open('CHANGES', 'rt').read()
+LONG_DESC = open('README.rst', 'rt').read() + '\n\n' + open('CHANGES.rst', 'rt').read()
 
 setup(
     name='objp',
