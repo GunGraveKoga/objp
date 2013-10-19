@@ -18,7 +18,7 @@ setup(
     package_data={'objp': ['data/*']},
     scripts=[],
     install_requires=[],
-    url='http://hg.hardcoded.net/objp/',
+    url='https://github.com/hsoft/objp',
     license='BSD License',
     description='Python<-->Objective-C bridge with a code generation approach',
     long_description=LONG_DESC,
