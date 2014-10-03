@@ -212,7 +212,8 @@ PyObject* ObjP_obj_o2p(NSObject *obj)
         return ObjP_dict_o2p((NSDictionary *)obj);
     }
     else {
-        return NULL;
+        NSLog(@"ObjP_obj_o2p failed to convert %@ of class %@", obj, [obj class]);
+        Py_RETURN_NONE;
     }
 }
 
