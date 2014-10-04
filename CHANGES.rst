@@ -1,6 +1,11 @@
 Changes
 =======
 
+Version 1.3.1 -- 2014/10/04
+---------------------------
+
+* Fixed a crash when converting a ``NSDictionary`` containing an unsupported type.
+
 Version 1.3.0 -- 2012/09/27
 ---------------------------
 
@@ -47,3 +52,4 @@ Version 0.1.0 -- 2012/01/05
 ---------------------------
 
 * Initial Release
+
