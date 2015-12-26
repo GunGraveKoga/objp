@@ -297,7 +297,7 @@ def generate_add_to_module_code(clsspec):
     return tmpl_replace(TEMPLATE_CLASS_ADD_TO_MOD, clsname=clsspec.clsname)
 
 def generate_python_proxy_code_from_clsspec(clsspecs, destpath):
-    if not isinstance(clsspecs, (list, tuple)):
+    if isinstance(clsspecs, ClassSpec):
         clsspecs = [clsspecs]
     clscode = []
     clsaddtomodcode = []
