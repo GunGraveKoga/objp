@@ -246,7 +246,7 @@ PyObject* ObjP_list_o2p(NSArray *list)
     OBJP_LOCKGIL;
     PyObject *pResult = PyList_New([list count]);
     OBJP_ERRCHECK(pResult);
-    NSInteger i;
+    NSUInteger i;
     for (i=0; i<[list count]; i++) {
         NSObject *obj = [list objectAtIndex:i];
         PyObject *pItem = ObjP_obj_o2p(obj);
