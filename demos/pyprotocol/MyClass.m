@@ -3,6 +3,6 @@
 @implementation MyClass
 - (NSString *)getAnswer:(NSInteger)arg
 {
-    return [NSString stringWithFormat:@"The answer is %i.", arg];
+    return [NSString stringWithFormat:@"The answer is %li.", arg];
 }
 @end

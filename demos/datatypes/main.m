@@ -11,7 +11,7 @@ int main(int argc, char *argv[])
     fclose(fp);
     Main *foo = [[Main alloc] init];
     NSLog(@"%@", [foo string:@"foo"]);
-    NSLog(@"%i", [foo int:42]);
+    NSLog(@"%li", [foo int:42]);
     NSLog(@"%f", [foo float:42.42]);
     NSLog(@"%i", [foo bool:YES]);
     // Make sure that we can convert all supported data types from a list.

@@ -11,10 +11,9 @@ def options(opt):
 def configure(conf):
     conf.load('compiler_c')
     conf.load('python')
-    conf.check_python_version((3,2))
+    conf.check_python_version((3,4))
     conf.check_python_headers()
     conf.env.append_value('FRAMEWORK_COCOA', 'Cocoa')
-    conf.env.ARCH = ['i386', 'x86_64']
 
 def build(bld):
     import objp.o2p
@@ -46,12 +45,3 @@ def m_hook(self, node):
     """Alias .m files to be compiled the same as .c files, gcc will do the right thing."""
     return self.create_compiled_task('c', node)
 
-@TaskGen.feature('cshlib')
-@TaskGen.after('apply_obj_vars', 'apply_link')
-def kill_flag(self):
-    fl = self.link_task.env.LINKFLAGS
-    if '-bundle' in fl and '-dynamiclib' in fl:
-         fl.remove('-bundle')
-         self.link_task.env.LINKFLAGS = fl
-
-# -*- indent-tabs-mode: t -*-

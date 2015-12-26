@@ -1,3 +1,5 @@
+import sys
+sys.path.append('.')
 from objp.util import dontwrap
 
 class Simple:
