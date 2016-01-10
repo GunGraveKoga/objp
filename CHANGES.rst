@@ -1,6 +1,12 @@
 Changes
 =======
 
+Version 1.3.2 -- 2016/01/09
+---------------------------
+
+* Fix bug in ``generate_python_proxy_code_from_clsspec()``.
+* Fix compilation warning in ``ObjP_list_o2p()``.
+
 Version 1.3.1 -- 2014/10/04
 ---------------------------
 

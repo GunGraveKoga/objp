@@ -7,13 +7,14 @@ CLASSIFIERS = [
     'Programming Language :: Python :: 3.2',
     'Programming Language :: Python :: 3.3',
     'Programming Language :: Python :: 3.4',
+    'Programming Language :: Python :: 3.5',
 ]
 
 LONG_DESC = open('README.rst', 'rt').read() + '\n\n' + open('CHANGES.rst', 'rt').read()
 
 setup(
     name='objp',
-    version='1.3.1',
+    version='1.3.2',
     author='Hardcoded Software',
     author_email='hsoft@hardcoded.net',
     packages=['objp'],
